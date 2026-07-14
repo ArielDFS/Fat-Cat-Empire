@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fat Cat Empire — logo</title>
+<style>
+  :root{
+    --ink:#241C2E; --laranja:#FF7A2F; --dourado:#FFC93C; --dourado-s:#D99A12;
+    --creme:#FFE8C8; --papel:#FDF3E3; --vermelho:#E63946;
+    --beco:#3B2E4F; --beco-s:#2A2039;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; background:radial-gradient(circle at 50% 35%,var(--beco),var(--beco-s));
+    display:flex; align-items:center; justify-content:center; padding:32px;
+    font-family:"Segoe UI",system-ui,sans-serif;
+  }
+  .lockup{
+    display:flex; align-items:center; justify-content:center; gap:28px; flex-wrap:wrap;
+  }
+  .emblem{width:min(46vw,360px); filter:drop-shadow(0 10px 14px rgba(0,0,0,.45)); user-select:none;}
+  .wm{
+    font-family:"Arial Black","Segoe UI",system-ui,sans-serif;
+    font-weight:900; line-height:.9; text-transform:uppercase; user-select:none; text-align:left;
+  }
+  .wm .big{
+    font-size:clamp(2.8rem,10vw,5.2rem); color:var(--dourado);
+    -webkit-text-stroke:6px var(--ink); paint-order:stroke fill;
+    text-shadow:0 6px 0 var(--ink), 0 9px 0 rgba(0,0,0,.35);
+  }
+  .wm .band{
+    display:inline-block; margin-top:10px; font-size:clamp(1.1rem,3.6vw,2rem);
+    letter-spacing:.24em; color:var(--ink); background:var(--dourado);
+    padding:5px 18px; border:4px solid var(--ink); border-radius:12px;
+    box-shadow:0 5px 0 rgba(0,0,0,.35);
+  }
+  .cap{
+    position:fixed; bottom:14px; left:0; right:0; text-align:center;
+    color:#b0a3c6; font-size:.76rem; letter-spacing:.04em;
+  }
+  @media (max-width:560px){ .lockup{flex-direction:column; gap:14px} .wm{text-align:center} }
+</style>
+</head>
+<body>
+  <div class="lockup">
+    <img class="emblem" src="/logo_king.png" alt="Rei Fat Cat" />
+    <div class="wm">
+      <div class="big">Fat<br>Cat</div>
+      <span class="band">Empire</span>
+    </div>
+  </div>
+  <div class="cap">Fat Cat Empire — lockup V2 · abra em tela cheia e dê um print pra exportar</div>
+</body>
+</html>

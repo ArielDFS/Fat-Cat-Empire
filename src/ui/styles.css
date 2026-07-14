@@ -1,0 +1,103 @@
+/* Passo 2: estilo mínimo e feio, só o suficiente pra estrutura ler e receber assets.
+   A paleta travada (ART_STYLE.md §2) entra de leve pra os PNGs não destoarem depois. */
+
+:root {
+  --ink: #241c2e;
+  --laranja: #ff7a2f;
+  --turq: #2ec4b6;
+  --dourado: #ffc93c;
+  --creme: #ffe8c8;
+  --papel: #fdf3e3;
+  --beco: #3b2e4f;
+  --beco-s: #2a2039;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--beco-s);
+  color: var(--papel);
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+.app { max-width: 860px; margin: 0 auto; padding: 12px; }
+
+.hud {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  background: var(--beco); border: 2px solid var(--ink); border-radius: 10px;
+  padding: 10px 14px;
+}
+.brand { margin-right: auto; font-size: 1.05rem; }
+.tag { font-size: .65rem; opacity: .7; font-weight: 400; }
+.res { display: flex; flex-direction: column; line-height: 1.1; }
+.res span { font-size: .6rem; text-transform: uppercase; letter-spacing: .06em; opacity: .7; }
+.res b { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+
+.stage { display: flex; gap: 12px; margin-top: 12px; align-items: flex-start; }
+@media (max-width: 640px) { .stage { flex-direction: column; } }
+
+.clickcol { text-align: center; }
+.bigfish {
+  width: 140px; height: 140px; padding: 0; cursor: pointer;
+  background: none; border: none;
+}
+.bigfish img { width: 100%; height: 100%; object-fit: contain; -webkit-user-drag: none; }
+.bigfish:active { transform: translateY(2px) scale(0.97); }
+.clickhint { font-size: .8rem; }
+
+.lanes { flex: 1; min-width: 0; }
+.qtybar { font-size: .8rem; margin-bottom: 8px; display: flex; gap: 4px; align-items: center; }
+.qtybar button {
+  border: 2px solid var(--ink); background: var(--beco); color: var(--papel);
+  border-radius: 6px; padding: 3px 10px; cursor: pointer; font-weight: 700;
+}
+.qtybar button.on { background: var(--laranja); color: var(--ink); }
+
+.lane {
+  display: flex; gap: 10px; align-items: stretch; min-height: 150px;
+  background: var(--beco); background-size: auto 100%; background-repeat: repeat-x;
+  background-position: center; border: 2px solid var(--ink); border-radius: 10px;
+  padding: 8px; margin-bottom: 8px; overflow: hidden;
+}
+.lane-nome, .lane-cnt, .lane-prod { text-shadow: 0 1px 2px rgba(0,0,0,.8); }
+.lane-icon {
+  flex: 0 0 104px; display: flex; align-items: center; justify-content: center;
+  background: none; padding: 0;
+}
+.lane-icon img { max-width: 100%; max-height: 100%; object-fit: contain;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+.lane-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.lane-head { display: flex; align-items: baseline; gap: 8px; }
+.lane-nome { font-weight: 800; }
+.lane-cnt { margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums; }
+.lane-prod { font-size: .78rem; color: var(--turq); font-weight: 700; }
+.strip {
+  display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: auto; flex: 1; overflow: hidden;
+  align-content: flex-end;
+}
+.cd {
+  width: 46px; height: 46px; object-fit: contain; -webkit-user-drag: none;
+  transform-origin: bottom center;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.45));
+  animation: catIdle 1.9s ease-in-out infinite;
+}
+@keyframes catIdle {
+  0%, 100% { transform: translateY(0) rotate(-2.5deg); }
+  50%      { transform: translateY(-4px) rotate(2.5deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cd { animation: none; }
+}
+.more { font-size: .7rem; opacity: .7; align-self: center; }
+
+.buy {
+  flex: 0 0 auto; align-self: center; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  border: 2px solid var(--ink); background: var(--dourado); color: var(--ink);
+  border-radius: 8px; padding: 8px 14px; cursor: pointer; font-weight: 800;
+}
+.buy:disabled { background: #6b5c7c; color: #cbbcd8; cursor: not-allowed; }
+.buy .cost { font-size: .72rem; font-variant-numeric: tabular-nums; }
+
+.foot { margin-top: 16px; font-size: .74rem; opacity: .7; line-height: 1.5; }
+.foot code { background: rgba(0,0,0,.3); padding: 1px 5px; border-radius: 4px; }
