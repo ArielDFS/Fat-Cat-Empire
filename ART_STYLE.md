@@ -1,4 +1,4 @@
-# ART_STYLE.md — Império Felino
+# ART_STYLE.md — Fat Cat Empire (codinome: Império Felino)
 
 > **Consistência não vem do prompt. Vem da restrição.**
 > Nenhum modelo de imagem respeita paleta exata, espessura de contorno ou escala.
@@ -128,6 +128,11 @@ multiple characters, cropped
 Os antigos "gatos nomeados" (Miaurício, Dona Sardinha, Bigodovski) **saíram** — deixaram de ser
 mecânica (ver GAME_DESIGN.md §4). Se voltarem, será como **mascotes** de prédio ou no endgame de
 **Artefatos**, reusando exatamente esta técnica de `[SUBJECT]` de acessório.
+
+**Mascote da marca (logo):** um **rei gato tabby laranja** — coroa dourada, manto vermelho com gola
+branca de rei, cetro com peixe dourado, castelinho de latas de atum ao fundo. Vive em `public/logo.html`
+(lockup com o wordmark "Fat Cat Empire"). _Pendente:_ definir se o tabby laranja é só o mascote ou o
+padrão do gato do jogo (hoje o gato-base do jogo é creme).
 
 ---
 

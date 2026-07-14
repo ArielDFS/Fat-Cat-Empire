@@ -1,5 +1,7 @@
-# GAME_DESIGN.md — Império Felino (Vertical Slice v0.2)
+# GAME_DESIGN.md — Fat Cat Empire (Vertical Slice v0.2)
 
+> **Título público:** *Fat Cat Empire* · **codinome interno** (docs/código): *Império Felino*.
+>
 > **Este documento é a fonte da verdade.** Se o código discordar dele, o código está errado.
 > Se uma ideia não está aqui, ela **não entra no slice** — vai para o backlog (§13).
 > Números marcados como `[TRAVADO]` só mudam via decisão explícita registrada no changelog.

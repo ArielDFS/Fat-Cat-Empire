@@ -1,6 +1,7 @@
-# Império Felino
+# Fat Cat Empire (codinome: Império Felino)
 
 Idle incremental de humor cartunesco: gatos de rua transformam um beco num império absurdo.
+**Fat Cat Empire** é o título público; **Império Felino** é o codinome interno usado nos docs e no código.
 Este documento é o **glossário** do projeto — a linguagem canônica. Não é spec nem lista de
 decisões (essas moram em `GAME_DESIGN.md` e em `docs/adr/`). Se um termo aqui conflita com o
 que você ia escrever, use o daqui ou mude aqui primeiro.
