@@ -42,6 +42,7 @@ beco num império absurdo, movidos a peixes, ronrons e ambição desproporcional
 - 3 gatos alocáveis ~~(removido — ver §4)~~
 - 1 evento aleatório (Festival da Sardinha)
 - 1 ciclo de prestígio (Nova Dinastia)
+- **Eras do Império** — grau civilizacional por run, dirigido pelo lifetime (ver §4.5); só as Eras do Beco
 - Save local + progresso offline
 - 8 conquistas
 
@@ -172,6 +173,62 @@ um dos eixos.
 
 ---
 
+## 4.5 Eras do Império — o eixo civilizacional `[decisão v0.3]`
+
+**Problema que resolve:** desbloquear prédios um após o outro dá progressão, mas não dá a *sensação
+de civilização evoluindo*. As **Eras** são essa camada — **sem** adicionar uma economia paralela
+(respeita o antipilar, §1).
+
+**O que é.** Um **grau civilizacional nomeado**, percorrido **dentro da run**, dirigido pelo
+`lifetime` de peixes. Ao cruzar o limiar de uma Era:
+
+1. **título** novo no HUD ("Beco Próspero");
+2. **lump único de peixes** — um empurrão comemorativo (não um multiplicador; ver balanceamento);
+3. **fanfarra** — o momento (a tela comemora); e em Eras marcadas, dispara a **transformação
+   visual do Beco** (§2, os 3 estágios).
+
+**Por que não fura o antipilar.** Não é recurso novo nem eixo novo: a Era é **derivada do
+`lifetime`** (que já existe e é monotônico), e o lump é peixe (recurso da run). O único estado novo
+é **um inteiro** — a Era mais alta já atingida na run — pra não repagar o lump ao recarregar.
+Reseta na **Nova Dinastia** (volta à Era 1), coerente com o ciclo (§6).
+
+**Escopo — escada desenhada longa, slice constrói curto.** A escada é a espinha civilizacional do
+jogo **inteiro** e **unifica os distritos do §13**: os distritos são os *grandes saltos* dela. O
+**slice implementa só as Eras do Beco**; o resto fica travado como horizonte (§13).
+
+### Escada (vision completa)
+
+| # | Era | Limiar `lifetime` (peixes) | No slice? | Dispara estágio do Beco |
+|---|---|---|---|---|
+| 1 | Beco Esquecido | 0 (início) | ✅ | estágio 1 |
+| 2 | Beco Movimentado | ~1.500 | ✅ | — |
+| 3 | Beco Próspero | ~8.000 | ✅ | estágio 2 |
+| 4 | Beco Notável | ~40.000 | ✅ | — |
+| 5 | Beco Imperial | ~120.000 | ✅ | estágio 3 |
+| 6 | Beco Lendário | ~600.000 | ✅ | — |
+| 7+ | Miadópolis · Praça Imperial · Domínio Cósmico · … · Império Interplanetário | — | ❌ backlog §13 | — |
+
+> As **6 Eras do Beco são mais granulares que os 4 prédios** de propósito: criam beats de
+> "civilização avançou" **entre** os desbloqueios (prédios em `lifetime` 0 / 250 / 8.000 / 120.000,
+> §3.3). É isso que mata o vazio entre um prédio e o próximo. Os limiares são **alvo de
+> balanceamento (§8)**, não sagrados como as constantes de §3.1.
+
+### O lump de peixes `[balanceamento]`
+
+Empurrão **pequeno e único** por Era — alvo: **~30 s da produção passiva no momento do cruzamento**
+(com um piso pra não ser irrelevante cedo). **Nunca** um multiplicador permanente: isso viraria um
+2º eixo de prestígio dentro da run e distorceria §4 e §8. Calibrar contra os alvos de ritmo (§8).
+
+### Notas de implementação
+
+- **Era atual = função pura de `lifetime`** (vive em `domain/`, testável). Sem novo recurso.
+- Persistir só `eraMaisAlta` (um inteiro) no save — evita repagar o lump ao recarregar; quem paga é
+  o **cruzamento ao vivo**, não a hidratação.
+- Casa com a **evolução visual** (§10): as Eras marcadas disparam os estágios do Beco (com os marcos, §3.4).
+- Reset na **Nova Dinastia** (§6): `eraMaisAlta` volta a 1.
+
+---
+
 ## 5. Evento aleatório (1)
 
 **Festival da Sardinha.** A cada 8–20 min (uniforme), um peixe dourado atravessa a tela por 12s.
@@ -245,7 +302,7 @@ Estes números são o **critério de aceite do jogo**, não sugestões.
 |---|---|---|
 | Linguagem | TypeScript (strict) | — |
 | Build | Vite | — |
-| UI | React + CSS Modules | Idle é HUD + números. Phaser é overkill agora. |
+| UI | React + CSS global (`ui/styles.css`) | Idle é HUD + números. Phaser é overkill agora. |
 | Estado | Zustand | Store única, fácil de serializar e testar |
 | Render das lanes | **A decidir:** DOM/`<img>` com teto visual de sprites, ou Canvas | Muitos gatos × 4 lanes; com teto (~45/lane) DOM aguenta. Revisitar se travar. |
 | Números | `number` (float64) | Exato até 9e15. Migrar p/ `break_infinity.js` só se o pós-slice passar disso |
@@ -307,7 +364,7 @@ export const BUILDINGS = [
 2. Loop de tick + store + 1 prédio + comprar gato + botão de clique (UI feia, sem arte).
 3. **Sessão de teste de 30 min jogando o feio.** Se não dá vontade de esperar, volte ao passo 1.
 4. Save + offline + modal de retorno.
-5. Os 4 prédios (desbloqueio em cascata), as habilidades passivas, os marcos.
+5. Os 4 prédios (desbloqueio em cascata), as habilidades passivas, os marcos, as **Eras do Império** (§4.5).
 6. Habilidades ativas + eixo de clique. Testar build ativa vs idle (§4, §8).
 7. Prestígio + tela de confirmação.
 8. Evento + conquistas.
@@ -346,7 +403,8 @@ Maré Alta (disparar uma Habilidade ativa durante o Festival) · Bigode Supremo 
 
 **Artefatos** — árvore de meta-progressão de endgame comprada com Coroas Felinas, no espírito dos
 *Ancients* do Clicker Heroes (é o lar dos "gatos nomeados" e itens colecionáveis). ·
-Miadópolis e demais distritos · Ronrons e Influência (só se virarem decisão, não número) ·
+Miadópolis e demais distritos (são os **grandes saltos da escada de Eras**, §4.5 — o trecho fora do Beco) ·
+Ronrons e Influência (só se virarem decisão, não número) ·
 raridades · árvore de legado · mais eventos e habilidades ativas · som ·
 animações de trabalho e celebração · migração para Phaser/Canvas se as lanes exigirem.
 
@@ -358,3 +416,4 @@ animações de trabalho e celebração · migração para Phaser/Canvas se as la
 |---|---|---|
 | 2026-07-13 | v0.1 — escopo travado do slice | Documento inicial derivado do plano conceitual |
 | 2026-07-13 | **v0.2 — reestruturação do modelo** | Grelha: prédios fixos + gatos como unidade comprável; híbrido idle+clicker (ADR-0001); sistema único de Habilidades (passiva/ativa) funde upgrades e marcos; decisão real vira build ativa-vs-idle; artefatos → endgame; layout de lanes estilo Cookie Clicker; §8 revisado |
+| 2026-07-14 | **v0.3 — + §4.5 Eras do Império** | Grelha: sensação de avanço civilizacional sem economia nova. Grau nomeado por run, dirigido pelo `lifetime`; cruzar Era dá título + lump de peixes + fanfarra e (em Eras marcadas) o estágio visual do Beco. Escada desenhada até o interplanetário, **unificando os distritos do §13**; slice constrói só as ~6 Eras do Beco (granulares > 4 prédios, pra beats entre desbloqueios). Entra no §2 (Dentro) e no §10 (passo 5) |

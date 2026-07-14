@@ -84,3 +84,11 @@ _Avoid_: sessão, tentativa, ciclo, jogo.
 **Nova Dinastia**:
 O ato de **prestígio**: reseta a run em troca de Coroas Felinas e um bônus global permanente.
 _Avoid_: prestígio (use "Nova Dinastia" para o ato; "prestígio" só como termo de gênero), rebirth, reset.
+
+**Era**:
+O **grau civilizacional** da run — um degrau **nomeado** (Beco Esquecido → … → Beco Imperial) que o
+império sobe conforme o lifetime de peixes cresce. Cruzar uma Era dá **título**, um **empurrão de
+peixes** e a **fanfarra**; algumas disparam a transformação visual do **Beco**. Reseta na **Nova
+Dinastia**. A escada completa vai até o interplanetário — os **distritos** são seus grandes saltos
+(backlog). Ver GAME_DESIGN.md §4.5.
+_Avoid_: nível, fase, tier; **estágio** (estágio é o visual do Beco/prédio; Era é o grau civilizacional).

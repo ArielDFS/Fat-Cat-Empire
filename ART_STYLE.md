@@ -1,19 +1,33 @@
 # ART_STYLE.md — Fat Cat Empire (codinome: Império Felino)
 
-> **Consistência não vem do prompt. Vem da restrição.**
-> Nenhum modelo de imagem respeita paleta exata, espessura de contorno ou escala.
-> Este documento define as regras; o `normalize_asset.py` (§8) as **impõe** no pós-processo.
-> É a combinação dos dois que faz 25 assets parecerem do mesmo jogo.
+> **Dois tracks, duas fontes de consistência.**
+> **World/UI** (prédios, lanes, ícones, VFX) é *Chunky Flat Cartoon*: a consistência vem da
+> **restrição** — paleta travada imposta pelo `normalize_asset.py` (§8).
+> **Character** (os gatos) é *Detailed Character*: a consistência vem de um **style block e uma
+> proporção compartilhados** (§5.2), com cor **livre por tipo**. Gato **não** passa pela quantização.
+> É a combinação dos dois que faz o jogo parecer coeso sem achatar os personagens.
+
+---
+
+## 0. Os dois tracks `[TRAVADO]`
+
+| Track | Cobre | Estilo | Pipeline | Consistência vem de |
+|---|---|---|---|---|
+| **World/UI** | prédios, fundos de lane, ícones, VFX, cenário | Chunky Flat Cartoon (§1A) | gera → **quantiza** p/ paleta travada (§8) | a **paleta travada** (§2A) |
+| **Character** | os 4 gatos-tipo (rua, pescador, peixeiro, banqueiro) | Detailed Character (§1B) | gera bespoke → recorta/ancora, **sem quantizar** | **style block + proporção** (§5.2) |
+
+Regra de decisão: **é um gato? → track Character.** Qualquer outra coisa → track World/UI.
+Nunca rode um gato pelo `--kind cat/lanecat` antigo (quantizaria e mataria o sombreado).
 
 ---
 
 ## 1. DNA do estilo
 
-**Nome interno:** *Chunky Flat Cartoon* — vetor grosso, achatado, saturado e caricato.
+### 1A. Chunky Flat Cartoon — World/UI
 
-O plano original pedia explicitamente para **abandonar o pastel aconchegante**. Então:
-nada de "cozy cat cafe". O alvo é legibilidade de ícone de app + humor de desenho de sábado
-de manhã. Cada asset precisa funcionar a 64px e ainda arrancar um sorriso.
+**Vetor grosso, achatado, saturado e caricato.** Nada de "cozy cat cafe". O alvo é legibilidade de
+ícone de app + humor de desenho de sábado de manhã. Cada asset precisa funcionar a 64px e ainda
+arrancar um sorriso.
 
 | Sim | Não |
 |---|---|
@@ -25,11 +39,32 @@ de manhã. Cada asset precisa funcionar a 64px e ainda arrancar um sorriso.
 
 **Teste da silhueta:** preencha o asset de preto. Se você não souber o que é, refaça.
 
+### 1B. Detailed Character — os gatos
+
+**Mascote de mobile game caprichado.** Contorno grosso ainda existe, mas por cima vem **volume
+renderizado**: cel shading com degradê macio, pelo detalhado, olhos grandes expressivos, traje
+temático **integrado** (não um acessório colado). Proporção fofa e chunky (cabeção, patas pequenas).
+Saturado, vibrante, luz quente do canto superior esquerdo com rim light sutil.
+
+| Sim | Não |
+|---|---|
+| Sombreado macio com volume, pelo detalhado | Chapado, minimalista, plano |
+| Traje inteiro coerente com o tipo | Acessório minúsculo solto |
+| Olhos grandes, expressão com personalidade | Cara neutra, genérica |
+| Cor **própria por tipo** (varia entre lanes) | Todos com a mesma pelagem |
+| Silhueta ainda legível a ~112px | Detalhe que vira papa no tamanho de jogo |
+
+**Teste da lane:** reduza a ~112px e repita 12×. Se virar borrão ou os tipos ficarem
+indistinguíveis, simplifique o traje ou aumente o contraste de pelagem.
+
 ---
 
-## 2. Paleta `[TRAVADA]`
+## 2. Paleta
 
-Cada cor tem **exatamente uma sombra**. Dois tons por material. Zero gradiente.
+### 2A. World/UI `[TRAVADA]`
+
+Cada cor tem **exatamente uma sombra**. Dois tons por material. Zero gradiente. O `normalize_asset.py`
+impõe isto no track World/UI.
 
 | Papel | Base | Sombra |
 |---|---|---|
@@ -45,21 +80,48 @@ Cada cor tem **exatamente uma sombra**. Dois tons por material. Zero gradiente.
 | Papel / UI clara | `#FDF3E3` | `#E3D6BE` |
 | Fundo do beco | `#3B2E4F` | `#2A2039` |
 
-**Regra:** o contorno nunca é preto puro (`#000`). Preto puro achata a imagem e denuncia
-asset de IA. É sempre `#241C2E`.
+**Regra:** o contorno nunca é preto puro (`#000`). É sempre `#241C2E`.
+
+### 2B. Character — guia de cor por tipo (não travada)
+
+Os gatos **não** são quantizados, mas os 4 tipos precisam **diferir entre si** de relance (decisão
+de design: variedade é *entre tipos*, §4 do GAME_DESIGN). Guia de pelagem + traje por tipo — cores
+livres, mas mantenha as **pelagens bem distintas**:
+
+| Tipo | Prédio | Pelagem | Traje integrado | Destaque |
+|---|---|---|---|---|
+| **rua** | Caixa de Papelão | laranja/ruivo tigrado | bandana surrada + crachá de tampinha | laranja |
+| **pescador** | Barraca de Peixe | cinza-azulado tigrado | chapéu de chuva turquesa + capa de chuva amarela + vara | turquesa/amarelo |
+| **peixeiro** | Peixaria do Beco | creme/tigrado claro | avental rosa + chapéu de papel + peixe na mão | rosa |
+| **banqueiro** | Banco do Atum | preto/grafite elegante | gravata-borboleta dourada + monóculo | dourado |
+
+O contorno escuro (`#241C2E`) é o **único elo forçado** com o track World/UI — mantenha-o nos gatos
+pra eles não flutuarem sobre os prédios chapados.
 
 ---
 
-## 3. Regras duras de desenho
+## 3. Regras de desenho
+
+### 3A. World/UI (flat)
 
 | Elemento | Regra |
 |---|---|
 | **Contorno** | Espessura uniforme, ~8px em canvas de 1024. Nunca varia dentro do mesmo asset. |
 | **Sombreamento** | Cel shading, borda dura, 1 tom de sombra. Luz **sempre** do canto superior esquerdo, 45°. |
 | **Perspectiva** | Frontal com inclinação de ~15° de cima. Ortográfica. Sem ponto de fuga. Sem isométrico. |
-| **Proporção do gato** | 2,5 cabeças de altura. Cabeça enorme, patas pequenas, acessório desproporcional. |
 | **Prédios** | Base plana alinhada ao rodapé do canvas. Sem sombra projetada no asset (a sombra é feita no jogo, com uma elipse chapada). |
-| **Fundo** | Sempre transparente. Nenhum cenário embutido no sprite. |
+| **Fundo** | Sempre transparente (exceto fundo de lane, §5.1). Nenhum cenário embutido no sprite. |
+
+### 3B. Character (detailed)
+
+| Elemento | Regra |
+|---|---|
+| **Proporção do gato** | ~2,5 cabeças de altura. Cabeça enorme, patas pequenas, traje proeminente. |
+| **Contorno** | Grosso e escuro (`#241C2E`), mas pode variar de espessura pra dar profundidade. |
+| **Sombreamento** | Cel shading **com degradê macio** e volume. Luz do canto superior esquerdo + rim light sutil. |
+| **Vista** | Frontal 3/4, corpo inteiro, pose com personalidade. |
+| **Fundo** | Transparente. Sem sombra de chão embutida (a elipse é feita no jogo). |
+| **Traje** | Integrado ao corpo, coerente com o tipo (§2B). Não é camada colada — é parte do personagem. |
 
 ---
 
@@ -67,27 +129,27 @@ asset de IA. É sempre `#241C2E`.
 
 Geração sempre em **1024×1024**, PNG com alpha. Exportação para o jogo em `@2x`.
 
-| Tipo | Altura no canvas de geração | Âncora | Export final |
-|---|---|---|---|
-| Gato (herói / mascote) | 640px | pés a 96px da base | 320px |
-| **Gato de lane** | 256px | pés no rodapé | **~40px** |
-| Prédio (ícone de lane) | cabe em 768×768 | base no rodapé | 384px |
-| **Fundo de lane** | 1024×256 (tira horizontal, tileável) | — | largura da lane |
-| Ícone UI | 256×256 | centro | 64px |
-| Partícula / VFX | 128px | centro | 64px |
+| Tipo | Track | Altura no canvas de geração | Âncora | Export final |
+|---|---|---|---|---|
+| **Gato-tipo (lane)** | Character | corpo inteiro em ~900px | pés no rodapé | **~112px** |
+| Prédio (ícone de lane) | World/UI | cabe em 768×768 | base no rodapé | 384px |
+| Fundo de lane | World/UI | 1024×256 (tira horizontal, tileável) | — | largura da lane |
+| Ícone UI | World/UI | 256×256 | centro | 64px |
+| Partícula / VFX | World/UI | 128px | centro | 64px |
+| Cenário (beco) | World/UI | 1024 | centro | moldura |
 
-O **gato de lane** é o gato-base + uniforme, **reduzido** para ~40px — precisa continuar legível
-e "fofo" nesse tamanho, com dezenas repetidos na faixa. O **fundo de lane** é uma tira horizontal
-que se repete no eixo X (a lane pode ser muito larga); não embuta detalhe que denuncie a emenda.
+**Mudança v0.3 (enxame reduzido):** o gato de lane deixou de ser 40px composto (`cat_base + uniforme`).
+Agora é **1 ilustração detalhada por tipo, exportada a ~112px**, e a lane mostra **~12 gatos** (não 48).
+Poucos e grandes, pra o detalhe do 1B render. O teto exato é afinável no código (`TETO_VISUAL`).
 
+O **fundo de lane** é uma tira horizontal que se repete no eixo X; não embuta detalhe que denuncie a emenda.
 Se o modelo não gerar alpha, gere em chroma `#FF00FF` e deixe o script recortar.
 
 ---
 
-## 5. STYLE BLOCK `[TRAVADO]`
+## 5. STYLE BLOCK — World/UI (sprite) `[TRAVADO]`
 
-Este bloco vai **verbatim, sem editar uma vírgula**, em *todo* prompt de imagem.
-Em inglês — os modelos obedecem melhor. Só o `[SUBJECT]` muda.
+Este bloco vai **verbatim** em *todo* prompt de sprite chapado (prédios, ícones, VFX). Só o `[SUBJECT]` muda.
 
 ```
 Flat vector cartoon game asset. Thick uniform dark outline (#241C2E, ~8px at 1024).
@@ -112,125 +174,259 @@ watermark, signature, isometric, low contrast, detailed fur texture, anime, chib
 multiple characters, cropped
 ```
 
-### Exemplos de `[SUBJECT]`
+### Exemplos de `[SUBJECT]` (World/UI)
 
 | Asset | SUBJECT |
 |---|---|
-| Gato-base | `a plain cream-furred cartoon cat standing on two legs, front view, arms slightly out, neutral proud expression, no accessories` |
-| Uniforme — gato de rua | `only a small tattered orange bandana and a bottle-cap badge, accessory item alone on transparent background, no cat` |
-| Uniforme — pescador | `only a small teal fisherman hat and a tiny fish hook, accessory item alone on transparent background, no cat` |
-| Uniforme — peixeiro | `only a small pink apron and a paper hat, accessory item alone on transparent background, no cat` |
-| Uniforme — banqueiro | `only a small golden bow tie and a tiny monocle, accessory item alone on transparent background, no cat` |
 | Caixa de Papelão nv.1 | `a beaten-up cardboard box shelter with a crooked fish sign, tiny and pathetic, empire starter home` |
 | Banco do Atum nv.3 | `a grand marble bank building with tuna-can columns and a golden fish emblem on the pediment, absurdly imperial` |
 | Ícone de peixe | `a single stylized fish icon, side view, simple, readable at 64 pixels` |
 
-Os antigos "gatos nomeados" (Miaurício, Dona Sardinha, Bigodovski) **saíram** — deixaram de ser
-mecânica (ver GAME_DESIGN.md §4). Se voltarem, será como **mascotes** de prédio ou no endgame de
-**Artefatos**, reusando exatamente esta técnica de `[SUBJECT]` de acessório.
+---
 
-**Mascote da marca (logo):** um **rei gato tabby laranja** — coroa dourada, manto vermelho com gola
-branca de rei, cetro com peixe dourado, castelinho de latas de atum ao fundo. Vive em `public/logo.html`
-(lockup com o wordmark "Fat Cat Empire"). _Pendente:_ definir se o tabby laranja é só o mascote ou o
-padrão do gato do jogo (hoje o gato-base do jogo é creme).
+## 5.1 STYLE BLOCK — fundos de lane e cenário `[TRAVADO]`
+
+> **Nota:** as lanes do slice usam a versão **detalhada** (§5.3). Este bloco chapado/quantizado
+> fica como fallback barato (cenários secundários, protótipo).
+
+O bloco da §5 assume **sprite**: transparente, sem cenário. **Fundos de lane são o oposto** —
+**opacos**, **tileáveis** no eixo X, e aqui o cenário *é* o asset. Bloco próprio, também verbatim,
+trocando só o `[SCENE]`.
+
+Diferenças-chave: contorno só nas formas de primeiro plano · paleta reduzida às cores da cena ·
+emenda invisível (esquerda casa com direita) · simples e limpo pro sprite ler por cima.
+
+```
+Flat vector cartoon game background strip, horizontal banner. Thick dark outline (#241C2E)
+on foreground shapes, cel shading with two tones per material, no gradients, no texture,
+no drop shadow, light from the top-left. Strict palette only: #3B2E4F #2A2039 #FF7A2F
+#D9541C #2EC4B6 #1B8C82 #FFC93C #D99A12 #FFE8C8 #E0BE97 #FDF3E3 #241C2E.
+[SCENE], SEAMLESS and TILEABLE horizontally (left and right edges must match), plain and
+uncluttered so cat sprites read clearly on top. Opaque, fills the entire frame.
+No characters, no text, no watermark, no logo.
+
+SUBJECT: [SCENE]
+```
+
+**Negative prompt:**
+
+```
+pastel or muted or desaturated colors, realistic or photorealistic or 3D render style,
+gradients, soft/airbrush shading, drop shadow or ground shadow, scenery, text, watermark,
+signature, isometric view, detailed fur texture, anime, blush, multiple cats, cropped edges.
+```
+
+> **`scenery` no negative** aqui significa "nada de cenário **extra** além do que o `[SCENE]` pediu".
+> A **paleta reduzida** ancora a cena nas cores do beco; troque só os destaques por cenário. O
+> `--kind lanebg` ainda quantiza pra paleta travada completa — a paleta enxuta é guia de geração.
+
+### Exemplos de `[SCENE]` (fundos de lane)
+
+| Asset | SCENE |
+|---|---|
+| `bg_lane_caixa` | `a grimy back-alley ground and low brick wall at night, empty alley floor and wall` |
+| `bg_lane_barraca` | `a wet cobblestone harbor dock floor with a low stone quay wall and scattered fish scales` |
+| `bg_lane_peixaria` | `a tiled fishmonger shop floor with a low counter base and puddles of melting ice` |
+| `bg_lane_banco` | `a polished marble bank floor with a low golden baseboard and tuna-can column bases` |
 
 ---
 
-## 6. Pipeline de consistência (a parte que importa)
+## 5.2 STYLE BLOCK — Character (gatos) `[TRAVADO]`
+
+O bloco dos **gatos**. Renderizado, não chapado. Verbatim; só o `[SUBJECT]` muda (a pelagem e o
+traje de cada tipo vêm de §2B). Este bloco foi calibrado e **aprovado** contra a imagem-piloto do pescador.
+
+```
+Polished mobile-game character art, cute cartoon cat mascot, single character, full body,
+front three-quarter view. Bold dark outline, rich cel shading with soft gradients and rendered
+volume, expressive oversized eyes, chunky adorable proportions with a big head and small paws.
+Vibrant saturated colors, warm storybook lighting from the top-left with a subtle rim light,
+detailed but clean fur. Readable silhouette, no busy background. Fully transparent background,
+no baked ground shadow, no scenery, no text, no watermark, centered, not cropped.
+
+SUBJECT: [SUBJECT]
+```
+
+**Negative prompt:**
+
+```
+flat vector, minimalist, plain, low detail, dull or washed-out colors, photorealistic, 3D render,
+deformed, extra limbs, blurry, text, watermark, signature, multiple characters, cropped, busy background
+```
+
+### `[SUBJECT]` dos 4 gatos-tipo
+
+| Tipo | SUBJECT |
+|---|---|
+| **pescador** ✅ | `a fluffy blue-gray tabby fisherman cat wearing a teal rain hat and a rolled-up yellow raincoat, holding a small fishing rod with a fish on the line, cheerful confident expression, a tiny anchor pin on the coat` |
+| **rua** | `a scruffy orange tabby street cat with a slightly torn ear and a tiny scar over one eye, wearing a tattered orange bandana around the neck and a flattened bottle-cap pinned as a badge, holding a fish bone like a little trophy, cocky mischievous grin, streetwise confident swagger` |
+| **peixeiro** | `a cream-furred cat fishmonger wearing a pink apron and a folded paper hat, holding a fresh fish, proud friendly expression, sleeves rolled up` |
+| **banqueiro** | `a sleek charcoal-black cat banker wearing a golden bow tie and a monocle, holding a gold coin, smug wealthy expression, groomed and dignified` |
+
+> **Regra de referência (§6B):** o pescador aprovado é a **âncora de estilo**. Gere os outros 3
+> *com ele como referência de estilo/traço* — muda a pelagem e o traje, mantém a família.
+
+---
+
+## 5.3 STYLE BLOCK — fundos de lane detalhados `[TRAVADO]` (ATIVO para as lanes)
+
+O fundo de lane migrou pro track Detailed (renderizado, sem quantização — igual aos gatos). A §5.1
+(chapado/quantizado) fica como fallback barato; **as lanes do slice usam este bloco**.
+
+**Aprendido na marra:** a primeira geração usava luz *atmosférica/direcional* ("warm lighting from
+the top-left, moody") e poças "reflecting teal light" — isso deixava um lado da tira mais claro que
+o outro e, ao repetir, dava **salto de brilho na emenda**. O conserto validado: **luz plana e
+uniforme de ponta a ponta**, e no `[SCENE]` descrever **tom** ("subtle teal tint"), nunca **luz
+refletida** ("reflecting light"). Bordas esquerda e direita idênticas pra emenda invisível.
+
+> Se a emenda ainda aparecer depois da luz acertada, os próximos suspeitos são **objetos únicos
+> grandes** (um caixote repete visível) e a **proporção** (cena alta repete mais na lane). A versão
+> aprovada mantém uma parede baixa e um caixote e funcionou — só mexa nisso se o seam persistir.
+
+```
+Polished mobile-game environment art, one continuous horizontal seamless background strip for a
+game lane. Rich cel shading with soft gradients and rendered volume, bold dark outlines on the
+main shapes, FLAT EVEN AMBIENT LIGHTING across the entire width with uniform brightness from edge
+to edge — no spotlight, no glow, no vignette, no directional light — vibrant colors, detailed yet
+clean, painterly game-art look matching a cute cartoon cat game. A walkable floor across the bottom
+two thirds and a low wall behind it, kept uncluttered along the top so character sprites read
+clearly standing on the floor. Perfectly tileable horizontally: the left and right edges must match
+seamlessly with absolutely no visible seam. Opaque, fills the entire frame.
+No characters, no cats, no text, no watermark, no logo, no color swatches, no UI, no border.
+
+SCENE: [SCENE]
+```
+
+**Negative prompt:**
+
+```
+uneven lighting, spotlight, bright glow, vignette, directional light, brightness gradient across the
+width, dark on one side light on the other, localized light, color palette swatches, color chart,
+grid of color blocks, flat solid color rectangles, visible seam, tiling error, misaligned edges,
+minimalist, plain, low detail, washed-out, photorealistic, 3D render, text, watermark, signature,
+characters, cats, cropped, clutter blocking the top
+```
+
+### Exemplos de `[SCENE]` (fundos de lane detalhados)
+
+A composição (chão nos 2/3 de baixo + parede baixa atrás) já está no bloco; o `[SCENE]` só descreve
+o **material e a coisa** de cada lane. Cor sempre como **tom**, nunca como luz refletida.
+
+| Asset | SCENE |
+|---|---|
+| `bg_lane_caixa` | `a grimy back-alley at night, weathered low brick wall, cracked cobblestone ground, a few scattered bottles and fish bones to one side, cool moody purple tones` |
+| `bg_lane_barraca` ✅ | `a wet cobblestone harbor dock at night, weathered stone quay wall, scattered fish scales, a coil of rope and a wooden crate to one side, faint shallow puddles with a subtle teal tint` |
+| `bg_lane_peixaria` | `a fishmonger shop floor, low tiled counter wall behind, scattered fish scales and thin puddles of melting ice, cool clean tones` |
+| `bg_lane_banco` | `a polished marble bank floor, low ornate wall with a golden baseboard behind, a small stack of coins to one side, warm golden tones` |
+
+Pipeline: `python normalize_asset.py raw/bg_lane_barraca.png --out src/assets/ --kind lanehd` (redimensiona
+a tira **sem quantizar**). No jogo a lane repete a tira no eixo X (`background-repeat: repeat-x`), então
+a emenda invisível é obrigatória.
+
+---
+
+## 6. Pipeline de consistência
+
+### 6A. World/UI (flat)
 
 ```
 1. MODEL SHEET  →  2. REFERENCE SET  →  3. GERAÇÃO  →  4. NORMALIZAÇÃO  →  5. QA
 ```
 
-**1. Model sheet primeiro.** Gere **só o gato-base**, umas 20 vezes, até um sair perfeito.
-Esse asset é o DNA do jogo inteiro. Não avance enquanto não estiver certo.
+**Normalização obrigatória.** Todo PNG de mundo/UI passa pelo `normalize_asset.py`: força a paleta,
+recorta, ancora e redimensiona (§8). É aqui que a consistência do track chapado acontece.
 
-**2. Reference set.** Escolha 2–3 imagens aprovadas (o gato-base + o primeiro prédio bom).
-A partir daqui, **nenhum asset é gerado do zero** — todos são gerados *com essas imagens como
-referência de estilo/personagem*.
+### 6B. Character (gatos)
 
-**3. Acessório é camada — agora é o *uniforme do tipo*.** Cada Prédio tem um **tipo de gato**
-(rua, pescador, peixeiro, banqueiro). Gere o **uniforme sozinho** (bandana, chapéu de pescador,
-avental, gravatinha) no mesmo canvas e escala, com fundo transparente. Compor no jogo
-`gato_base + uniforme` custa **1 asset por tipo** em vez de 1 personagem inteiro — e é a única
-forma de escalar para 8, 20, 50 tipos depois sem refazer tudo. **Mesma técnica do v0.1, alvo novo:**
-o acessório deixou de ser "o personagem Miaurício" e virou "o uniforme dos gatos pescadores".
+1. **Um gato-tipo por vez**, como **ilustração inteira** (traje embutido). Não há mais `cat_base + uniforme`
+   nem composição em runtime — cada tipo é um asset bespoke.
+2. **Âncora de estilo:** o **pescador aprovado** é a referência. Gere os outros 3 com ele como
+   referência de estilo/personagem (Gemini/Nano Banana `--cref`, Midjourney `--sref`). É isto que
+   mantém os 4 coesos sem quantização.
+3. Fundo **transparente** (ou chroma `#FF00FF`).
+4. **Normalização SEM quantização:** `python normalize_asset.py raw/cat_pescador.png --out src/assets/ --kind charcat`.
+   Esse modo **só** recorta o chroma, apara o alpha, ancora e redimensiona a ~112px — **não** toca nas cores.
+5. QA pelo checklist **9B**.
 
-**4. Normalização obrigatória.** Todo PNG passa pelo script. Ele força a paleta, recorta,
-ancora e redimensiona. É aqui que a consistência realmente acontece.
-
-**5. QA.** Checklist no §9.
+> A composição/edição humana (recorte, âncora, escolha de referência) é justamente o que tira o
+> asset da zona "puramente gerado por IA" — bom pro estilo e pro lado jurídico.
 
 ### Ferramentas — trade-offs
 
 | Abordagem | Prós | Contras | Quando usar |
 |---|---|---|---|
-| **Edição por referência** (Gemini/Nano Banana, Midjourney `--sref`/`--cref`) | Rápido, barato, ótimo em "o mesmo gato, outro acessório" | Paleta e espessura de traço escapam | **Comece aqui.** É o certo para os ~25 assets do slice |
-| **Modelo treinado no art bible** (Scenario, Layer, Sprixen) | <cite index="6-1">Treina um modelo nas suas referências e gera centenas de assets sem style drift</cite> | Mensalidade; só compensa em volume | A partir de ~50 assets / expansão dos distritos |
-| **LoRA própria** (SD local) | Controle total, sem custo por imagem | Setup e curva de aprendizado | <cite index="1-1">Faz sentido quando o projeto exige centenas de imagens de um personagem muito distinto</cite> — ou seja, só no jogo completo |
-| **Asset pack comprado** | Consistência garantida, hoje | Não é o *seu* jogo | Plano B se a arte virar o gargalo |
-
-> Nota jurídica prática: <cite index="3-1">imagens puramente geradas por IA podem não ser protegidas por direito autoral nos EUA, enquanto as que passam por edição e composição humana significativa têm mais chance de proteção</cite>. A etapa de normalização + composição manual já te coloca do lado certo dessa linha.
+| **Edição por referência** (Gemini/Nano Banana, Midjourney `--sref`/`--cref`) | Rápido, barato, ótimo em "o mesmo estilo, outro traje" | Paleta e traço escapam | **Comece aqui.** Certo para os ~25 assets do slice |
+| **Modelo treinado no art bible** (Scenario, Layer) | Gera centenas sem style drift | Mensalidade | A partir de ~50 assets |
+| **LoRA própria** (SD local) | Controle total | Setup + curva | Só no jogo completo |
 
 ---
 
-## 7. Lista de assets do slice (~25)
+## 7. Lista de assets do slice (~23)
 
-| Grupo | Itens | Qtd |
-|---|---|---|
-| Gato | corpo-base (idle) + 1 frame de piscada | 2 |
-| Uniformes de tipo | rua, pescador, peixeiro, banqueiro | 4 |
-| Prédios (ícone de lane) | 4 prédios × níveis 1 e 2 | 8 |
-| **Fundos de lane** | 1 tira por prédio × 4 | 4 |
-| Cenário | fundo do beco em 3 estágios (moldura geral) | 3 |
-| Ícones | peixe, coroa, compra, habilidade, gato, evento | 6 |
-| VFX | peixe, moeda, confete, estrela | 4 |
+| Grupo | Itens | Track | Qtd |
+|---|---|---|---|
+| **Gatos-tipo (detalhados)** | rua, pescador, peixeiro, banqueiro | Character | 4 |
+| Prédios (ícone de lane) | 4 prédios × níveis 1 e 2 | World/UI | 8 |
+| Fundos de lane | 1 tira por prédio × 4 | World/UI | 4 |
+| Cenário | fundo do beco em 3 estágios | World/UI | 3 |
+| Ícones | peixe, coroa, compra, habilidade, evento | World/UI | 5 |
+| VFX | peixe, moeda, confete, estrela | World/UI | 4 |
 
-**Total ≈ 31.** O **gato de lane** não é asset novo: é o gato-base + uniforme reduzido a ~40px
-(compõe em runtime). **Nível 3 dos prédios, expressões e animações de trabalho ficam fora do slice.**
+**Mudança v0.3:** os "gatos-tipo detalhados" (4) **substituem** o antigo `cat_base` + `blink` + os 4
+`uni_*` (6 assets → 4). Sem composição em runtime. **Nível 3 dos prédios e animações ficam fora do slice.**
 
 ### Nomenclatura `[TRAVADA]`
 
 ```
-cat_base_idle.png          cat_base_blink.png
-uni_rua.png                uni_pescador.png        uni_peixeiro.png        uni_banqueiro.png
-bld_caixa_n1.png           bld_caixa_n2.png
-bld_barraca_n1.png         ...
-bg_lane_caixa.png          bg_lane_barraca.png     bg_lane_peixaria.png    bg_lane_banco.png
-bg_beco_e1.png             bg_beco_e2.png          bg_beco_e3.png
-icon_peixe.png             icon_coroa.png          ...
-vfx_confete.png            ...
+cat_rua.png            cat_pescador.png       cat_peixeiro.png       cat_banqueiro.png
+bld_caixa_n1.png       bld_caixa_n2.png       bld_barraca_n1.png     ...
+bg_lane_caixa.png      bg_lane_barraca.png    bg_lane_peixaria.png   bg_lane_banco.png
+bg_beco_e1.png         bg_beco_e2.png         bg_beco_e3.png
+icon_peixe.png         icon_coroa.png         ...
+vfx_confete.png        ...
 ```
 
 Minúsculas, `snake_case`, sem acento, sem espaço. O `id` bate com o `id` em `src/data/`.
 
 ---
 
-## 8. `tools/normalize_asset.py`
+## 8. `normalize_asset.py`
 
-O enforcement. Roda em todo asset gerado, sem exceção.
+O enforcement do track World/UI, e o recorte/escala do track Character.
 
 ```bash
-python tools/normalize_asset.py raw/ --out src/assets/ --kind cat
+# World/UI: quantiza pra paleta travada
+python normalize_asset.py raw/bld_barraca_n1.png --out src/assets/ --kind building
+python normalize_asset.py raw/bg_lane_barraca.png --out src/assets/ --kind lanebg
+
+# Character: NÃO quantiza — só recorta, ancora e redimensiona
+python normalize_asset.py raw/cat_pescador.png --out src/assets/ --kind charcat
 ```
 
-Ele: (1) recorta chroma/fundo, (2) **quantiza cada pixel para a cor mais próxima da paleta
-travada**, (3) apara o alpha, (4) reancora e redimensiona conforme §4, (5) salva PNG otimizado.
+Para World/UI ele: (1) recorta chroma/fundo, (2) **quantiza cada pixel para a cor mais próxima da
+paleta travada**, (3) apara o alpha, (4) reancora e redimensiona, (5) salva PNG otimizado.
 
-O passo 2 é o segredo. Nenhum prompt garante `#FF7A2F`; o script garante.
+Para `--kind charcat` (gatos), o passo **(2) é pulado** — as cores detalhadas do gato são
+preservadas. Todo o resto (recorte, apara, âncora, resize) roda igual.
 
 ---
 
 ## 9. Checklist de aceite de asset
 
-- [ ] Fundo 100% transparente, sem franja branca na borda
+### 9A. World/UI (flat)
+- [ ] Fundo 100% transparente (ou opaco tileável, se fundo de lane), sem franja branca
 - [ ] Toda cor pertence à paleta travada (o script confirma)
-- [ ] Contorno `#241C2E`, espessura uniforme
-- [ ] Uma sombra dura, luz vindo de cima à esquerda
-- [ ] Escala e âncora corretas para o tipo (§4)
-- [ ] Legível a 64px
-- [ ] Passa no teste da silhueta
+- [ ] Contorno `#241C2E`, espessura uniforme · uma sombra dura, luz de cima à esquerda
+- [ ] Escala e âncora corretas (§4) · legível a 64px · passa no teste da silhueta
 - [ ] Nome do arquivo bate com o `id` no `data/`
+
+### 9B. Character (gatos)
+- [ ] Fundo 100% transparente, sem franja/halo na borda
+- [ ] Contorno escuro (`#241C2E`) presente — elo com o mundo chapado
+- [ ] Pelagem **distinta** dos outros 3 tipos (§2B) · traje coerente com o tipo
+- [ ] Legível e reconhecível a ~112px, repetido na lane sem virar papa (teste da lane, §1B)
+- [ ] Coeso com a âncora de estilo (o pescador) · sem sombra de chão embutida
+- [ ] Nome `cat_<tipo>.png` bate com o `tipoGato` em `src/data/buildings.ts`
 
 ---
 
@@ -241,3 +437,6 @@ O passo 2 é o segredo. Nenhum prompt garante `#FF7A2F`; o script garante.
 | 2026-07-13 | v0.1 — paleta, style block e pipeline travados |
 | 2026-07-13 | Acessório = uniforme de tipo; assets de lane (gato pequeno + fundo); `bg_lane` no script |
 | 2026-07-13 | **+ Cinza de rua** (`#ADA6B5` / `#6F6780`) na paleta travada — pelo alternativo do gato de rua |
+| 2026-07-14 | **+ §5.1 STYLE BLOCK de fundo/cenário** — bloco travado para lane backgrounds (opaco, tileável, paleta reduzida) |
+| 2026-07-14 | **+ §5.3 STYLE BLOCK de fundo de lane detalhado** — lanes migram pro track Detailed (renderizado, `--kind lanehd`, sem quantizar). Fix validado contra o erro real (luz direcional/atmosférica dava salto de brilho na emenda ao repetir): **luz plana e uniforme edge-to-edge** + cor como tom, não luz refletida, no `[SCENE]`; bordas idênticas. Composição chão + parede baixa mantida. §5.1 chapado vira fallback |
+| 2026-07-14 | **v0.3 — dois tracks de arte.** Gatos migram de "flat + `cat_base`+uniforme composto a 40px" para **Detailed Character**: 1 ilustração bespoke por tipo (§5.2, aprovado no piloto do pescador), export ~112px, enxame reduzido (~12/lane), **sem quantização** (`--kind charcat`). World/UI segue chapado e quantizado. Adiciona §0 (tracks), §1B, §2B, §3B, §5.2, §6B, §9B; revê §4, §7, §8 |

@@ -12,7 +12,12 @@ Impõe a bíblia de arte (ART_STYLE.md) nos PNGs gerados por IA:
 Uso:
     python normalize_asset.py raw/ --out src/assets/ --kind cat
     python normalize_asset.py raw/bld_caixa_n1.png --out src/assets/ --kind building
+    python normalize_asset.py raw/cat_pescador.png --out src/assets/ --kind charcat
     python normalize_asset.py raw/ --out src/assets/ --kind icon --check-only
+
+Track de arte (ART_STYLE.md §0): os --kind do World/UI QUANTIZAM para a paleta travada.
+O --kind charcat (gatos detalhados, §5.2) NÃO quantiza — preserva as cores do personagem,
+só recorta, apara, ancora e redimensiona.
 
 Dependência: pillow  (pip install pillow)
 Opcional:    rembg   (pip install rembg)  -> use --rembg se o fundo não for chroma nem alpha
@@ -51,13 +56,19 @@ ALPHA_THRESHOLD = 8             # alpha <= isso vira totalmente transparente
 KINDS = {
     "cat":      (320, "bottom"),
     "lanecat":  (40,  "bottom"),   # gato de lane: gato-base + uniforme reduzido (ART_STYLE §4)
+    "charcat":  (112, "bottom"),   # gato-tipo detalhado (track Detailed, ART_STYLE §5.2) — NAO quantiza
     "building": (384, "bottom"),
     "bg":       (720, "center"),
-    "lanebg":   (256, "strip"),    # fundo de lane: tira horizontal tileável (ART_STYLE §4)
+    "lanebg":   (256, "strip"),    # fundo de lane CHAPADO: tira tileável, quantizada (ART_STYLE §5.1)
+    "lanehd":   (256, "strip"),    # fundo de lane DETALHADO: tira tileável, NAO quantiza (track Detailed)
     "icon":     (64,  "center"),
     "vfx":      (64,  "center"),
     "acc":      (320, "bottom"),   # uniforme de tipo, gerado sozinho
 }
+
+# Track Character (ART_STYLE.md §0): estes --kind NAO passam pela quantização de paleta —
+# preservam as cores detalhadas do personagem. Todo o resto (recorte, apara, âncora, resize) roda.
+NO_QUANTIZE = {"charcat", "lanehd"}
 
 
 def hex_to_rgb(h: str) -> tuple[int, int, int]:
@@ -138,10 +149,17 @@ def process(path: Path, out_dir: Path, kind: str, check_only: bool, use_rembg: b
             sys.exit("rembg não instalado. Rode: pip install rembg")
 
     img = strip_chroma(img)
-    _, drift = quantize_to_palette(img)          # mede a fidelidade do que a IA entregou
-    img = trim_alpha(img)
-    img = fit(img, kind)
-    img, _ = quantize_to_palette(img)            # reimpoe a paleta DEPOIS do resize
+
+    if kind in NO_QUANTIZE:
+        # Track Character: preserva as cores do gato. Só recorta, ancora e redimensiona.
+        drift = 0.0
+        img = trim_alpha(img)
+        img = fit(img, kind)
+    else:
+        _, drift = quantize_to_palette(img)      # mede a fidelidade do que a IA entregou
+        img = trim_alpha(img)
+        img = fit(img, kind)
+        img, _ = quantize_to_palette(img)        # reimpoe a paleta DEPOIS do resize
 
     if not check_only:
         out_dir.mkdir(parents=True, exist_ok=True)

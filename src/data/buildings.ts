@@ -2,8 +2,9 @@
  * CONTEÚDO — prédios. Só dados, zero lógica (GAME_DESIGN.md §9).
  *
  * O `id` bate com o nome dos assets em `src/assets/` (ART_STYLE.md §7).
- * No passo 2 do §10 existe **só a Caixa de Papelão** — os outros 3 entram no passo 5.
- * Como o resto do jogo é dirigido por esta lista, adicioná-los depois é só estender o array.
+ * Os 4 prédios e seus números vêm da tabela §3.3. Custo base, produção/gato e limiar de
+ * desbloqueio são alvo de balanceamento (§8) — mexer aqui é o jeito certo de ajustar o ritmo,
+ * ao contrário das constantes `[TRAVADO]` de §3.1.
  */
 
 export type TipoGato = "rua" | "pescador" | "peixeiro" | "banqueiro";
@@ -33,6 +34,36 @@ export const BUILDINGS: readonly Building[] = [
     custoBasePorGato: 15,
     producaoPorGato: 0.1,
     desbloqueio: 0,
+    marcos: [10, 25, 50, 100],
+  },
+  {
+    id: "barraca_peixe",
+    nome: "Barraca de Peixe",
+    descricao: "Onde os gatos descobriram que peixe também vem de fora do lixo.",
+    tipoGato: "pescador",
+    custoBasePorGato: 100,
+    producaoPorGato: 1,
+    desbloqueio: 250,
+    marcos: [10, 25, 50, 100],
+  },
+  {
+    id: "peixaria_beco",
+    nome: "Peixaria do Beco",
+    descricao: "Atacado de sardinha. Cheiro forte, lucro mais forte.",
+    tipoGato: "peixeiro",
+    custoBasePorGato: 1_100,
+    producaoPorGato: 8,
+    desbloqueio: 8_000,
+    marcos: [10, 25, 50, 100],
+  },
+  {
+    id: "banco_atum",
+    nome: "Banco do Atum",
+    descricao: "Guardam atum em cofres. Ninguém sabe por quê, mas rende.",
+    tipoGato: "banqueiro",
+    custoBasePorGato: 12_000,
+    producaoPorGato: 47,
+    desbloqueio: 120_000,
     marcos: [10, 25, 50, 100],
   },
 ] as const;
