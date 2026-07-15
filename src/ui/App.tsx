@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { BUILDINGS } from "../data/buildings";
 import { iniciarLoop } from "../core/loop";
@@ -12,12 +12,13 @@ import {
   multiplicadorProducaoDoPredio,
 } from "../state/store";
 import { descreverEfeito, poolDe } from "../data/abilities";
+import { eraPorNivel } from "../data/eras";
 import { iniciarAutoSave } from "../state/save";
 import { artOf } from "./buildingArt";
+import { skyDaEra } from "./eraArt";
 import { DevPanel } from "./DevPanel";
 import fishImg from "../assets/fish_click.png";
 import coinImg from "../assets/fish_coin.png";
-import skyBeco from "../assets/sky_beco.png";
 
 /** Teto de gatos desenhados por lane. O enxame não cresce além disso; vira "+N". */
 const MAX_SHOWN = 36;
@@ -88,6 +89,15 @@ function fmtDuracao(segundos: number): string {
 
 const QUANTIDADES = [1, 10, 100] as const;
 
+/** Numeral romano para o grau da Era (I..VI no slice). */
+const ROMANOS = ["", "I", "II", "III", "IV", "V", "VI"] as const;
+function romano(n: number): string {
+  return ROMANOS[n] ?? String(n);
+}
+
+/** Quanto tempo a fanfarra de Era fica na tela antes de sumir sozinha (ms). */
+const FANFARRA_MS = 4200;
+
 /** Uma partícula "+N" que sobe e some após o clique. */
 interface Pop {
   id: number;
@@ -115,14 +125,44 @@ export function App() {
   const coroas = useGame((s) => s.coroas);
   const gatos = useGame((s) => s.gatos);
   const habilidades = useGame((s) => s.habilidades);
+  const eraMaisAlta = useGame((s) => s.eraMaisAlta);
+  const eraFanfarra = useGame((s) => s.eraFanfarra);
   const clicar = useGame((s) => s.clicar);
   const comprarGatos = useGame((s) => s.comprarGatos);
   const comprarHabilidade = useGame((s) => s.comprarHabilidade);
   const ganhoOffline = useGame((s) => s.ganhoOffline);
   const fecharModalOffline = useGame((s) => s.fecharModalOffline);
+  const fecharFanfarra = useGame((s) => s.fecharFanfarra);
 
   const rate = prodPorSegundo({ gatos, coroas, habilidades });
   const clickPow = poderDeClique({ gatos, coroas, habilidades });
+  const era = eraPorNivel(eraMaisAlta);
+
+  // A fanfarra de Era some sozinha depois de FANFARRA_MS (o lump já foi creditado no cruzamento).
+  useEffect(() => {
+    if (!eraFanfarra) return;
+    const id = window.setTimeout(fecharFanfarra, FANFARRA_MS);
+    return () => window.clearTimeout(id);
+  }, [eraFanfarra, fecharFanfarra]);
+
+  // Confete da fanfarra: um leque de peixes/moedas/brilhos saindo do card. Memoizado por Era —
+  // senão os ticks (que re-renderizam durante os ~4 s da fanfarra) re-sorteariam tudo a cada frame.
+  const confete = useMemo(() => {
+    if (!eraFanfarra) return [];
+    return Array.from({ length: 18 }, (_, i) => {
+      const ang = (i / 18) * Math.PI * 2 + Math.random() * 0.5;
+      const dist = 130 + Math.random() * 190;
+      return {
+        tx: Math.cos(ang) * dist,
+        ty: Math.sin(ang) * dist - 40, // leve viés pra cima (sobe e cai)
+        rot: Math.random() * 720 - 360,
+        sc: 0.65 + Math.random() * 0.8,
+        delay: Math.random() * 0.22,
+        dur: 1.1 + Math.random() * 0.8,
+        kind: i % 3, // 0 = moeda, 1 = peixe, 2 = brilho
+      };
+    });
+  }, [eraFanfarra]);
 
   // Cascata de desbloqueio (§3.3): só mostra prédios cujo limiar já foi cruzado nesta run.
   const desbloqueados = BUILDINGS.filter((b) => predioDesbloqueado(b, lifetime));
@@ -139,8 +179,39 @@ export function App() {
   }
 
   return (
-    <div className="app" style={{ ["--sky" as string]: `url(${skyBeco})` }}>
+    <div className="app" style={{ ["--sky" as string]: `url(${skyDaEra(eraMaisAlta)})` }}>
       <div className="skybg" aria-hidden="true" />
+
+      {eraFanfarra && (
+        <div className="fanfarra" role="status" aria-live="polite" onClick={fecharFanfarra}>
+          <div className="fanfarra-rays" aria-hidden="true" />
+          <div className="fanfarra-card">
+            <span className="fanfarra-kicker">Nova Era do Império</span>
+            <span className="fanfarra-num">Era {romano(eraFanfarra.nivel)}</span>
+            <h2 className="fanfarra-nome">{eraFanfarra.nome}</h2>
+            <p className="fanfarra-mundo">Seu império subiu de escala: <b>{eraFanfarra.escala}</b> 🐾</p>
+          </div>
+          <div className="fanfarra-burst" aria-hidden="true">
+            {confete.map((p, i) => {
+              const style: CSSProperties = {
+                ["--tx" as string]: `${p.tx}px`,
+                ["--ty" as string]: `${p.ty}px`,
+                ["--rot" as string]: `${p.rot}deg`,
+                ["--sc" as string]: `${p.sc}`,
+                animationDelay: `${p.delay}s`,
+                animationDuration: `${p.dur}s`,
+              };
+              return (
+                <span key={i} className="ff-p" style={style}>
+                  {p.kind === 0 && <img src={coinImg} alt="" />}
+                  {p.kind === 1 && <img src={fishImg} alt="" />}
+                  {p.kind === 2 && <span className="ff-spark">✨</span>}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {ganhoOffline && (
         <div className="modal-backdrop" role="presentation" onClick={fecharModalOffline}>
           <div
@@ -168,6 +239,10 @@ export function App() {
         <div className="brand">
           <img className="brand-logo" src="/logo_lockup.png" alt="Fat Cat Empire" />
           <span className="tag">dev</span>
+        </div>
+        <div className="era-badge" title="A Era avança com o total de peixes da run (§4.5)">
+          <span className="era-num">Era {romano(era.nivel)} · {era.escala}</span>
+          <span className="era-nome">{era.nome}</span>
         </div>
         <div className="hud-res">
           <div className="res">

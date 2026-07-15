@@ -23,6 +23,9 @@ import { producaoPorSegundo } from "../domain/production";
 import type { PredioProdutor } from "../domain/production";
 import { calcularGanhoOffline } from "../domain/offline";
 import type { GanhoOffline } from "../domain/offline";
+import { nivelDaEra, lumpDaEra } from "../domain/era";
+import { LIMIARES, LUMP_SEGUNDOS, LUMP_PISO, eraPorNivel } from "../data/eras";
+import type { Era } from "../data/eras";
 import { carregarSave, gravarSave } from "./save";
 
 /** gatos por prédio, tudo em zero. */
@@ -92,6 +95,32 @@ function efeitosCliqueGlobais(habilidades: readonly string[]): EfeitoClique[] {
   return efeitosComprados(habilidades).filter((e): e is EfeitoClique => poolDe(e) === "clique");
 }
 
+/**
+ * Aplica um ganho de peixes que TAMBÉM conta como `lifetime` (produção do tick ou clique) e
+ * processa os cruzamentos de Era (§4.5). Devolve o patch para `set`.
+ *
+ * O ganho move o `lifetime`; se ele cruzar um ou mais limiares de Era, cada Era nova paga um
+ * **lump** (§4.5) — creditado só em peixes, **não** no lifetime, para o presente não empurrar a
+ * run pra próxima Era de graça (o lifetime continua sendo produção genuína). A fanfarra mostra a
+ * Era mais alta alcançada. Sem cruzamento, só credita peixes e lifetime.
+ *
+ * Reusado pelo tick, pelo clique e pelo painel dev — é o único caminho de "ganho ao vivo".
+ */
+export function aplicarGanhoLifetime(s: GameState, ganho: number): Partial<GameState> {
+  const lifetime = s.lifetime + ganho;
+  const nivelNovo = nivelDaEra(lifetime, LIMIARES);
+  if (nivelNovo <= s.eraMaisAlta) {
+    return { peixes: s.peixes + ganho, lifetime };
+  }
+  // Cruzou uma ou mais Eras: paga o lump de cada (produção estável — não depende de peixes).
+  const rate = prodPorSegundo(s);
+  let peixes = s.peixes + ganho;
+  for (let n = s.eraMaisAlta + 1; n <= nivelNovo; n++) {
+    peixes += lumpDaEra(rate, LUMP_SEGUNDOS, LUMP_PISO);
+  }
+  return { peixes, lifetime, eraMaisAlta: nivelNovo, eraFanfarra: eraPorNivel(nivelNovo) };
+}
+
 /** Traduz o estado bruto para o formato que `domain/production` entende. */
 function produtores(
   gatos: Record<string, number>,
@@ -111,9 +140,13 @@ export interface GameState {
   gatos: Record<string, number>;
   /** Ids das Habilidades passivas já compradas na run (§3.4). Reseta na Nova Dinastia (futuro). */
   habilidades: string[];
+  /** Era mais alta já atingida na run (§4.5). Persistida (inteiro) para não repagar o lump. */
+  eraMaisAlta: number;
 
   /** Ganho da última ausência, enquanto o modal de retorno está aberto (null = sem modal). */
   ganhoOffline: GanhoOffline | null;
+  /** Era recém-cruzada ao vivo, enquanto a fanfarra toca (null = sem fanfarra). Não persiste. */
+  eraFanfarra: Era | null;
   /** Já carregou o save nesta sessão? Evita reaplicar o offline (ex.: StrictMode em dev). */
   hidratado: boolean;
 
@@ -131,6 +164,8 @@ export interface GameState {
   salvar: () => void;
   /** Fecha o modal de retorno (os peixes já foram creditados na hidratação). */
   fecharModalOffline: () => void;
+  /** Encerra a fanfarra de Era (o lump já foi creditado no cruzamento). */
+  fecharFanfarra: () => void;
 }
 
 export const useGame = create<GameState>((set, get) => ({
@@ -139,7 +174,9 @@ export const useGame = create<GameState>((set, get) => ({
   coroas: 0,
   gatos: gatosZerados(),
   habilidades: [],
+  eraMaisAlta: 1,
   ganhoOffline: null,
+  eraFanfarra: null,
   hidratado: false,
 
   comprarGatos: (buildingId, quantidade) => {
@@ -172,7 +209,7 @@ export const useGame = create<GameState>((set, get) => ({
   clicar: () => {
     const s = get();
     const ganho = poderDeClique(s);
-    set({ peixes: s.peixes + ganho, lifetime: s.lifetime + ganho });
+    set(aplicarGanhoLifetime(s, ganho));
   },
 
   tick: (dtSegundos) => {
@@ -180,7 +217,7 @@ export const useGame = create<GameState>((set, get) => ({
     const s = get();
     const ganho = prodPorSegundo(s) * dtSegundos;
     if (ganho <= 0) return;
-    set({ peixes: s.peixes + ganho, lifetime: s.lifetime + ganho });
+    set(aplicarGanhoLifetime(s, ganho));
   },
 
   hidratar: () => {
@@ -203,11 +240,21 @@ export const useGame = create<GameState>((set, get) => ({
     // A produção que alimenta o offline precisa ser a EFETIVA (com coroas já embutidas),
     // pois `domain/offline` não reaplica coroas. `prodPorSegundo` entrega exatamente isso.
     const ganho = calcularGanhoOffline(prodPorSegundo(base), Date.now() - save.ts);
+    const lifetimeFinal = base.lifetime + ganho.peixes;
+
+    // A Era é sincronizada em SILÊNCIO na hidratação: quem paga o lump é o cruzamento AO VIVO
+    // (§4.5), não a hidratação. Saves antigos sem `eraMaisAlta` derivam do lifetime. Como o offline
+    // pode ter cruzado Eras enquanto ausente, subimos a Era até o lifetime final — sem lump/fanfarra.
+    const eraSalva =
+      typeof save.eraMaisAlta === "number" && save.eraMaisAlta >= 1
+        ? Math.floor(save.eraMaisAlta)
+        : nivelDaEra(base.lifetime, LIMIARES);
 
     set({
       ...base,
       peixes: base.peixes + ganho.peixes,
-      lifetime: base.lifetime + ganho.peixes,
+      lifetime: lifetimeFinal,
+      eraMaisAlta: Math.max(eraSalva, nivelDaEra(lifetimeFinal, LIMIARES)),
       ganhoOffline: ganho.peixes > 0 ? ganho : null,
       hidratado: true,
     });
@@ -221,10 +268,12 @@ export const useGame = create<GameState>((set, get) => ({
       coroas: s.coroas,
       gatos: s.gatos,
       habilidades: s.habilidades,
+      eraMaisAlta: s.eraMaisAlta,
     });
   },
 
   fecharModalOffline: () => set({ ganhoOffline: null }),
+  fecharFanfarra: () => set({ eraFanfarra: null }),
 }));
 
 // --- Seletores puros para a UI (evitam reimplementar a economia no componente) ---

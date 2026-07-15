@@ -25,6 +25,8 @@ export interface SaveData {
   gatos: Record<string, number>;
   /** Ids das Habilidades passivas compradas na run (§3.4). Ausente em saves v0.3 → []. */
   habilidades: string[];
+  /** Era mais alta atingida na run (§4.5). Ausente em saves antigos → derivado do lifetime na store. */
+  eraMaisAlta?: number;
 }
 
 /** O que a store fornece; `versao` e `ts` são carimbados aqui. */
@@ -64,7 +66,13 @@ export function carregarSave(): SaveData | null {
       ? data.habilidades.filter((x): x is string => typeof x === "string")
       : [];
 
-    return { ...(data as SaveData), habilidades };
+    // `eraMaisAlta` (§4.5) entrou depois: ausente/ inválido → undefined (a store deriva do lifetime).
+    const eraMaisAlta =
+      typeof data.eraMaisAlta === "number" && Number.isFinite(data.eraMaisAlta) && data.eraMaisAlta >= 1
+        ? Math.floor(data.eraMaisAlta)
+        : undefined;
+
+    return { ...(data as SaveData), habilidades, eraMaisAlta };
   } catch {
     return null; // JSON corrompido ou LocalStorage inacessível.
   }

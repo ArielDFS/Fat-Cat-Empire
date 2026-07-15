@@ -7,14 +7,17 @@ transformam um beco num império absurdo, movidos a peixes, ronrons e ambição 
 Você compra **gatos** dentro de **prédios fixos**, o número sobe sozinho, e escolhe investir no
 eixo **passivo (idle)** ou de **clique (ativo)**.
 
-**Status:** vertical slice **v0.4** em construção. `domain/` (economia) pronta e testada; **save +
+**Status:** vertical slice **v0.5** em construção. `domain/` (economia) pronta e testada; **save +
 progresso offline**, os **4 prédios com desbloqueio em cascata**, o clique e as **Habilidades
 passivas** já funcionam. As passivas vêm em **dois sabores** que competem pelos mesmos peixes
 ([ADR-0002](docs/adr/0002-passiva-de-clique.md)): **Produção** (idle) e **Clique** (ativa, invisível
 offline) — 4 arquétipos (§3.4). Arte em **dois tracks** (mundo chapado + personagens detalhados) —
-gatos, lanes, logo e HUD "claro imperial" já na tela. Falta o **estágio visual por marco** (§3.4
-ponto 2, à espera de arte), as **Habilidades ativas** de burst (§3.5), o **prestígio** (§6) e as
-**Eras do Império** (§4.5).
+gatos, lanes, logo e HUD "claro imperial" já na tela. As **Eras do Império** (§4.5) estão prontas:
+6 graus de escala (beco → galáxia), cada um trocando o **mundo de fundo** ao cruzar, com lump de
+peixes e fanfarra. Falta as **Habilidades ativas** de burst (§3.5) e o **prestígio** (§6).
+
+> Cortados em grelha (não são pendências): o **estágio visual do prédio por marco** e os **3 estágios
+> do Beco** — a progressão visível é a troca de mundo por Era + o enxame enchendo a lane.
 
 ## Rodar
 

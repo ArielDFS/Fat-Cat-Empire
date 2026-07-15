@@ -404,6 +404,67 @@ Cor sempre puxando a **identidade do §2C**, para os prédios não convergirem.
 
 ---
 
+## 5.5 STYLE BLOCK — mundo de fundo (Era) `[TRAVADO]` (ATIVO para os céus de Era)
+
+O **backdrop fixo da viewport** (§7 "Fundo de mundo (Era)"), um por Era (GAME_DESIGN §4.5/§4.6.5).
+**Não** é tira tileável como a lane (§5.3) nem sprite transparente: é uma **cena de estabelecimento
+larga e opaca**. O `[SCENE]` **sobe de escala** Era a Era (beco → vila → cidade → metrópole →
+império → galáxia) **e varia a hora do dia** (noite → amanhecer → dia → entardecer → crepúsculo →
+cósmico) — é isso que faz cada mundo parecer *outro mundo*, não outra noite roxa. Verbatim; só o
+`[SCENE]` muda.
+
+> **Legibilidade da UI = scrim de código, não céu escuro `[opção 2, 2026-07-15]`.** Antes os céus
+> eram forçados a "dark/moody" pra a UI clara ler por cima — o que deixava as 6 Eras parecidas. Agora
+> a legibilidade vem de um **degradê escuro sutil no topo/base** do `.skybg` (`styles.css`), então o
+> céu pode ser **claro**. Só mantenha a composição **calma no topo e no terço esquerdo**, onde o HUD
+> e a coluna do clique flutuam.
+
+```
+Polished mobile-game environment art, a single wide establishing background scene that fills
+the whole frame as a fixed world backdrop behind a game UI. Rich cel shading with soft gradients
+and rendered volume, bold dark outlines (#241C2E) on the main shapes, vibrant painterly
+cute-cartoon cat-game look. Strong sense of place and scale with clear atmospheric depth. The time
+of day and mood are defined by the SCENE. Keep the composition relatively calm and uncluttered
+across the upper area and the left third, where UI panels will float, with the richer detail toward
+the lower edge and the sides. Cohesive with the same cartoon cat world (a grimy cat back-alley grown
+into a civilization). No tiling needed. Opaque, fills the entire frame. No characters, no cats, no
+text, no watermark, no logo, no UI, no border, no color swatches.
+
+SCENE: [SCENE]
+```
+
+**Negative prompt:**
+
+```
+flat solid-color background, minimalist empty, color palette swatches, color chart, grid of color
+blocks, spotlight glow in the center, photorealistic, 3D render, text, watermark, signature,
+characters, cats, people, UI elements, HUD, border frame, cropped, cluttered center
+```
+
+### `[SCENE]` dos céus de Era (Era 1 = `sky_beco.png` noturno, já existe)
+
+A **hora do dia** sobe junto com a escala — cada Era é visivelmente outro momento, não outra noite.
+Os arquivos entregues vieram com prefixo `cat_*` (nome livre, mapeado em `ui/eraArt.ts`).
+
+| Era / arquivo | Hora | SCENE |
+|---|---|---|
+| 2 · Vila · `cat_village` | amanhecer | `a small cat village at soft dawn, crooked cobblestone lanes and little tile-roofed cottages with warm glowing windows, fish-shaped weathervanes, a modest market square with wooden stalls, misty low hills behind, a low golden sun rising through a peach-and-rose sky with soft clouds, cozy humble frontier-town waking up, warm pastel dawn palette with gentle mist` |
+| 3 · Cidade · `cat_city` | dia claro | `a cheerful cat city on a bright sunny midday, rows of colorful brick townhouses and shopfronts along a sparkling canal, a stone clock tower with a fish emblem, cobbled avenues and little bridges, fluffy white clouds in a clear blue sky, banners and awnings, prosperous and lively, fresh vivid daytime palette of blue sky, warm brick and green trees` |
+| 4 · Metrópole · `cat_metropole` | entardecer | `a sprawling cat METROPOLIS skyline at golden-hour sunset, dense clusters of tall glass skyscrapers and fish-shaped signs beginning to glow, elevated highways, a central tower crowned with a giant cat-ear silhouette, a dramatic orange-and-pink sky with the sun low behind the towers casting long light, the first neon signs lighting up, big-city grandeur, warm sunset palette with cool blue shadows and neon accents` |
+| 5 · Império · `cat_empire` | crepúsculo | `a colossal futuristic imperial cat capital at twilight blue hour, a planet-spanning throne-city of towering sleek golden-and-white skyscraper-palaces far grander and more advanced than an ordinary metropolis, immense domed spires and a giant glowing crown emblem crowning the central mega-tower, monumental boulevards and floating platforms, a space elevator and faint orbital rings rising into the deep-blue dusk sky where the first stars and a large ringed planet appear on the horizon, holographic banners and warm golden energy-light, majestic and absurdly imposing, regal palette of deep-blue twilight, radiant gold and soft cyan energy glow` |
+| 6 · Galáxia · `cat_galaxy_empire` | cósmico | `a vast cosmic cat empire in deep space, a titanic ringed space-station shaped like a curled sleeping cat orbiting a glowing purple-and-teal nebula, fleets of tiny fish-shaped starships, planets and a luminous milky-way band arching across a star-strewn cosmos, distant glowing orbital cities, epic sci-fi scale and wonder, rich cosmic palette of violet, magenta and starlight against deep space` |
+
+> **Lição de direção (2026-07-15):** escala **e** tecnologia sobem **monotonicamente** — cada Era
+> tem que parecer *maior e mais avançada* que a anterior. A 1ª versão do Império era um palácio de
+> mármore clássico/antigo: lia como **retrocesso** depois da Metrópole cyberpunk. Corrigido pra
+> **capital imperial futurista planetária** (out-escala a metrópole + pistas do espaço → ponte pra
+> Galáxia). Quando a escada esticar (§13), nenhum degrau novo pode parecer mais antigo que o anterior.
+
+Pipeline (v0.5): trata à mão e salva em `src/assets/`. Depois registra cada arquivo por nível em
+`src/ui/eraArt.ts` (`SKY_POR_NIVEL`); o que faltar cai no fallback `sky_beco.png`.
+
+---
+
 ## 6. Pipeline de consistência
 
 ### 6A. World/UI (flat)
@@ -446,14 +507,18 @@ do style block e do contorno `#241C2E`.
 | Grupo | Itens | Track | Qtd |
 |---|---|---|---|
 | **Gatos-tipo (detalhados)** | rua, peixeiro, feirante, pescador | Detailed (§5.2) | 4 |
-| Prédios (ícone de lane) | 4 prédios × níveis 1 e 2 | **Detailed (§5.4)** | 8 |
+| Prédios (ícone de lane) | 4 prédios × **1 ícone** | **Detailed (§5.4)** | 4 |
 | Fundos de lane | 1 tira por prédio × 4 | Detailed (§5.3) | 4 |
-| Fundo de mundo (Era) | 1 cena detalhada por Era, backdrop fixo da viewport | Detailed | 1/Era |
+| Fundo de mundo (Era) | 1 cena detalhada por Era × 6 Eras, backdrop fixo da viewport | Detailed | 6 |
 | Ícones | peixe, coroa, compra, habilidade, evento | World/UI | 5 |
 | VFX | peixe, moeda, confete, estrela | World/UI | 4 |
 
 **Mudança v0.3:** os "gatos-tipo detalhados" (4) **substituem** o antigo `cat_base` + `blink` + os 4
-`uni_*` (6 assets → 4). Sem composição em runtime. **Nível 3 dos prédios e animações ficam fora do slice.**
+`uni_*` (6 assets → 4). Sem composição em runtime.
+
+> **Níveis de prédio — CORTADOS (grelha, 2026-07-15).** O prédio tem **1 ícone só** (não n1/n2/n3):
+> os marcos deixaram de mudar o sprite (GAME_DESIGN §3.4). A progressão visível fica na **troca de
+> mundo por Era** (§5.5) + o enxame na lane. Antes esta lista pedia "4 prédios × níveis 1 e 2 = 8".
 
 ### Nomenclatura (v0.5 — livre, mapeada em código)
 
@@ -467,10 +532,15 @@ cat_rua.png       cardbox.png           lane_cardbox.png           fish_coin.png
 cat_fish_seller.png  fishing_barrack.png  lane_fishing_barrack.png  fish_click.png
 cat_feirante.png  market.png            lane_market.png            logo.png
 cat_fisher.png    pier.png              lane_fishing_pier.png
+
+# céus de Era (mundo de fundo, mapeados em ui/eraArt.ts — prefixo cat_ é nome livre, não são gatos)
+sky_beco.png (Era 1)   cat_village.png (2)   cat_city.png (3)
+cat_metropole.png (4)  cat_empire.png (5)    cat_galaxy_empire.png (6)
 ```
 
 Só o **contorno `#241C2E`** e os style blocks (§5.x) são travados. Minúsculas, `snake_case`, sem
-acento, sem espaço. O ícone do Píer ainda não existe — ver placeholder em `buildingArt.ts`.
+acento, sem espaço. Os 4 prédios-piloto e os 6 céus já têm arte; o mapeamento vive em
+`ui/buildingArt.ts` (prédios) e `ui/eraArt.ts` (céus).
 
 ---
 
@@ -524,4 +594,7 @@ Nomes de arquivo são livres; o mapeamento `Building.id → {icone, lane, gato}`
 | 2026-07-14 | **Câmera dos prédios = 3/4 dimensional (levemente isométrica).** Correção: o "sem isométrico / frontal 15°" do §3A não batia com os prédios reais (Caixa/Barraca têm topo e lateral visíveis). Adotado o ângulo dimensional que **casa** com os existentes; elevação 2D plana e isométrico extremo ficam no negative. Ajusta §3A e a câmera do §5.4 |
 | 2026-07-15 | **Gato da Barraca vira peixeiro (tuxedo).** O gato-vendedor da Barraca deixa de ser o pescador: novo `cat_fish_seller.png` (tuxedo branco-e-preto, avental teal listrado, aprovado). O pescador cinza-azulado (`cat_fisher.png`) fica guardado. Atualiza §2B, §5.2 |
 | 2026-07-15 | **v0.5 — `normalize_asset.py` aposentado.** Tratamento (recorte/resize/âncora) passa a ser **à mão**; **sem quantização automática** — paleta vira guia de geração em todos os tracks; coesão fica no contorno `#241C2E` + style blocks. Nomes de arquivo livres, mapeados em `src/ui/buildingArt.ts`. Script deletado. Reescreve §0, §2A, §6, §8; ajusta §5.1, §5.3, §9 |
+| 2026-07-15 | **+ §5.5 STYLE BLOCK de mundo de fundo (Era).** Backdrop fixo da viewport, um por Era (GAME_DESIGN §4.5/§4.6.5): cena de estabelecimento larga, opaca; **não** tileável (≠ lane §5.3). `[SCENE]` sobe de escala beco → galáxia. Casado com a escada de escala do GAME_DESIGN (Eras deixam de ser "do Beco") |
+| 2026-07-15 | **Níveis de prédio (n1/n2/n3) cortados — documentando decisão de grelha.** Os marcos não mudam mais o sprite do prédio (GAME_DESIGN §3.4); cada prédio tem **1 ícone só**. §7 volta de "4×2=8" pra 4; a linha de mundo de Era vira 6. A progressão visível fica na troca de mundo por Era (§5.5) + o enxame na lane |
+| 2026-07-15 | **Céus de Era variam a hora do dia (opção 2).** Antes forçados a "noite escura" pra a UI ler por cima — deixava as 6 Eras parecidas. Agora sobem noite → amanhecer → dia → entardecer → crepúsculo → cósmico (vende a subida de escala). A legibilidade passa a vir de um **scrim** (degradê escuro sutil no topo/base do `.skybg`, `styles.css`), não do céu escuro. Prompts dos 5 céus refeitos no §5.5 |
 | 2026-07-15 | **Prédio 4: Banco do Atum → Píer de Pesca.** O pescador guardado vira o gato do Píer; lane `lane_fishing_pier.png` já existe; ícone pendente. Identidade de cor: índigo/azul-marinho + madeira escura + âmbar (§2C). Os 4 prédios são **pilotos** — virão muitos mais em ordem crescente. Atualiza §2B, §2C, §5.2, §5.3, §5.4, §7; código em `buildings.ts`/`abilities.ts`/`buildingArt.ts` |

@@ -16,7 +16,7 @@ beco num império absurdo, movidos a peixes, ronrons e ambição desproporcional
 
 | Pilar | Como se manifesta no slice |
 |---|---|
-| Progressão visível | O beco muda visualmente conforme os prédios sobem de nível e as lanes enchem de gatos |
+| Progressão visível | O **mundo troca a cada Era** (§4.5) e as lanes enchem de gatos conforme o enxame cresce |
 | Humor constante | Todo nome de prédio, tipo de gato, habilidade e conquista é uma piada curta |
 | Decisão real | **Build ativa (clique) vs. build idle (passiva)** — o jogador escolhe em que eixo investir cada Dinastia |
 | Recompensa frequente | Números subindo, habilidade nova a cada poucos minutos, evento surpresa |
@@ -34,7 +34,8 @@ beco num império absurdo, movidos a peixes, ronrons e ambição desproporcional
 ## 2. Escopo travado do slice
 
 ### Dentro
-- 1 cenário (Beco Inicial), com transformação visual em 3 estágios
+- 1 cenário base (o beco + as lanes); a **transformação visual** vem da **troca de mundo por Era**
+  (§4.5/§4.6.5) — os "3 estágios do Beco" foram **cortados** (grelha)
 - 2 recursos: **Peixes** (run) e **Coroas Felinas** (permanente)
 - 4 **prédios fixos**, cada um hospedando **um tipo de gato**
 - **Gatos** como a unidade que se compra em quantidade (o produtor)
@@ -42,7 +43,7 @@ beco num império absurdo, movidos a peixes, ronrons e ambição desproporcional
 - 3 gatos alocáveis ~~(removido — ver §4)~~
 - 1 evento aleatório (Festival da Sardinha)
 - 1 ciclo de prestígio (Nova Dinastia)
-- **Eras do Império** — grau civilizacional por run, dirigido pelo lifetime (ver §4.5); só as Eras do Beco
+- **Eras do Império** — grau de **escala** civilizacional por run, dirigido pelo lifetime (ver §4.5); a escada beco → galáxia comprimida em 6 degraus
 - Save local + progresso offline
 - 8 conquistas
 
@@ -97,23 +98,28 @@ o jogador compra **gatos** dentro dele. Os prédios diferem pela **produção po
 
 ### 3.4 Marcos e Habilidades passivas
 
-A cada marco de gatos **do mesmo prédio**, duas coisas acontecem:
+A cada marco de gatos **do mesmo prédio**, **destrava uma Habilidade passiva** daquele prédio — uma
+melhoria **comprável** (com peixes): o marco *abre*, o jogador *compra* (modelo Cookie Clicker/
+Clicker Heroes).
 
 ```
 marcos = [10, 25, 50, 100]
 ```
 
-1. **Destrava uma Habilidade passiva** daquele prédio — uma melhoria **comprável** (com peixes):
-   o marco *abre*, o jogador *compra* (modelo Cookie Clicker/Clicker Heroes). As passivas vêm em
-   **dois sabores que competem pelos mesmos peixes** (ver [ADR-0002](docs/adr/0002-passiva-de-clique.md)):
-   - **Passiva de Produção** — buffa a produção idle daquele prédio. Rende presente **e** ausente.
-     Motor da **Build idle**.
-   - **Passiva de Clique** — aumenta o **poder de clique** (efeito global, apesar de morar no prédio).
-     **Invisível offline** (não rende ausente). Motor da **Build ativa**.
-2. **Dispara a mudança visual** do prédio: nível 1 → 2 em 25 gatos, nível 2 → 3 em 100.
+As passivas vêm em **dois sabores que competem pelos mesmos peixes** (ver [ADR-0002](docs/adr/0002-passiva-de-clique.md)):
+- **Passiva de Produção** — buffa a produção idle daquele prédio. Rende presente **e** ausente.
+  Motor da **Build idle**.
+- **Passiva de Clique** — aumenta o **poder de clique** (efeito global, apesar de morar no prédio).
+  **Invisível offline** (não rende ausente). Motor da **Build ativa**.
 
-> **Decisão de design (v0.2):** isto **funde** os antigos "Upgrades" (§3.6 do v0.1) e o antigo
-> "dobra automática por marco" (§3.4 do v0.1) num **único** sistema — habilidade passiva
+> **Mudança visual do prédio por marco — CORTADA (grelha):** o marco **não** muda mais o sprite do
+> prédio (o antigo "nível 1 → 2 → 3" saiu). A **progressão visível** (pilar §1) fica na **troca de
+> mundo por Era** (§4.5/§4.6.5) + o **enxame enchendo a lane**. Motivo: 2–3 sprites por prédio é caro
+> e de baixo retorno no modelo empilhado com dezenas de prédios (§4.6.4). O marco hoje faz **só** uma
+> coisa — abrir a passiva.
+
+> **Decisão de design (v0.2):** o sistema de passivas **funde** os antigos "Upgrades" (§3.6 do v0.1) e
+> o antigo "dobra automática por marco" (§3.4 do v0.1) num **único** sistema — habilidade passiva
 > comprável, destravada por marco. Um sistema a menos.
 
 **Arquétipos no slice (4)** — a variedade vem daqui, não de "todas ×2" (ADR-0002):
@@ -209,39 +215,48 @@ um dos eixos.
 de civilização evoluindo*. As **Eras** são essa camada — **sem** adicionar uma economia paralela
 (respeita o antipilar, §1).
 
-**O que é.** Um **grau civilizacional nomeado**, percorrido **dentro da run**, dirigido pelo
-`lifetime` de peixes. Ao cruzar o limiar de uma Era:
+**O que é.** Um **grau de escala civilizacional nomeado**, percorrido **dentro da run**, dirigido
+pelo `lifetime` de peixes. As Eras **sobem de escala** — não são seis sabores do mesmo beco, e sim
+**beco → vila → cidade → metrópole → império → galáxia** (é o arco do §1, "gatos de rua viram um
+império absurdo", do início ao fim). Cada Era carrega **dois rótulos**: a `escala` (o degrau
+legível, que o jogador sente subir) e o `nome` próprio (o trocadilho — o pilar do humor §1). Ao
+cruzar o limiar de uma Era:
 
-1. **título** novo no HUD ("Beco Próspero");
-2. **lump único de peixes** — um empurrão comemorativo (não um multiplicador; ver balanceamento);
-3. **fanfarra** — o momento (a tela comemora); e em Eras marcadas, dispara a **transformação
-   visual do Beco** (§2, os 3 estágios).
+1. **título** novo no HUD ("Era III · Cidade — Gatópolis");
+2. **lump único de peixes** — um empurrão comemorativo (não um multiplicador; ver balanceamento).
+   Entra **só em peixes, não no `lifetime`** — assim o presente não empurra a run pra próxima Era de
+   graça (o lifetime segue sendo produção genuína, base honesta da escada e do prestígio);
+3. **fanfarra** — o momento (a tela comemora) e a **troca do mundo de fundo** (§4.6.5: cada Era = 1
+   backdrop bespoke que troca a viewport inteira).
 
 **Por que não fura o antipilar.** Não é recurso novo nem eixo novo: a Era é **derivada do
 `lifetime`** (que já existe e é monotônico), e o lump é peixe (recurso da run). O único estado novo
 é **um inteiro** — a Era mais alta já atingida na run — pra não repagar o lump ao recarregar.
 Reseta na **Nova Dinastia** (volta à Era 1), coerente com o ciclo (§6).
 
-**Escopo — escada desenhada longa, slice constrói curto.** A escada é a espinha civilizacional do
-jogo **inteiro** e **unifica os distritos do §13**: os distritos são os *grandes saltos* dela. O
-**slice implementa só as Eras do Beco**; o resto fica travado como horizonte (§13).
+**Escopo — a escada de escala inteira, comprimida no slice `[revisto 2026-07-15]`.** Decisão de
+direção: em vez de o slice ficar preso em "seis Eras do Beco" e deixar os distritos (Miadópolis,
+galáctico…) só no §13, o slice **já traça a escada de escala inteira** (beco → galáxia) em 6
+degraus. Isso **puxa os antigos "distritos" do §13 pra dentro da escada de Eras**: Miadópolis e o
+nível galáctico agora são **Eras do slice**, não horizonte distante. No jogo completo a escada
+**estica** (mais degraus *entre* estes), não ganha um teto novo.
 
-### Escada (vision completa)
+### Escada do slice (escala inteira, comprimida)
 
-| # | Era | Limiar `lifetime` (peixes) | No slice? | Dispara estágio do Beco |
+| # | Escala | Nome (piada) | Limiar `lifetime` (peixes) | Céu |
 |---|---|---|---|---|
-| 1 | Beco Esquecido | 0 (início) | ✅ | estágio 1 |
-| 2 | Beco Movimentado | ~1.500 | ✅ | — |
-| 3 | Beco Próspero | ~8.000 | ✅ | estágio 2 |
-| 4 | Beco Notável | ~40.000 | ✅ | — |
-| 5 | Beco Imperial | ~120.000 | ✅ | estágio 3 |
-| 6 | Beco Lendário | ~600.000 | ✅ | — |
-| 7+ | Miadópolis · Praça Imperial · Domínio Cósmico · … · Império Interplanetário | — | ❌ backlog §13 | — |
+| 1 | Beco | Beco Esquecido | 0 (início) | `sky_beco.png` ✅ |
+| 2 | Vila | Vila do Ronrom | ~1.500 | pendente |
+| 3 | Cidade | Gatópolis | ~8.000 | pendente |
+| 4 | Metrópole | Miadópolis | ~40.000 | pendente |
+| 5 | Império | Império dos Bigodes | ~120.000 | pendente |
+| 6 | Galáxia | Via-Láctea Felina | ~600.000 | pendente |
 
-> As **6 Eras do Beco são mais granulares que os 4 prédios** de propósito: criam beats de
-> "civilização avançou" **entre** os desbloqueios (prédios em `lifetime` 0 / 250 / 8.000 / 120.000,
-> §3.3). É isso que mata o vazio entre um prédio e o próximo. Os limiares são **alvo de
-> balanceamento (§8)**, não sagrados como as constantes de §3.1.
+> As **6 Eras são mais granulares que os 4 prédios** de propósito: criam beats de "civilização
+> avançou" **entre** os desbloqueios (prédios em `lifetime` 0 / 250 / 8.000 / 120.000, §3.3). É isso
+> que mata o vazio entre um prédio e o próximo. Os limiares e os nomes são **alvo de balanceamento /
+> polimento (§8)**, não sagrados como as constantes de §3.1. Cada Era = **1 céu bespoke** (§4.6.5);
+> hoje só a Era 1 tem asset, as demais caem no fallback `sky_beco.png` até serem geradas.
 
 ### O lump de peixes `[balanceamento]`
 
@@ -256,11 +271,16 @@ Empurrão **pequeno e único** por Era — alvo: **~30 s da produção passiva n
 
 ### Notas de implementação
 
-- **Era atual = função pura de `lifetime`** (vive em `domain/`, testável). Sem novo recurso.
+- **Era atual = função pura de `lifetime`** (vive em `domain/era.ts`, testável). Sem novo recurso.
 - Persistir só `eraMaisAlta` (um inteiro) no save — evita repagar o lump ao recarregar; quem paga é
-  o **cruzamento ao vivo**, não a hidratação.
-- Casa com a **evolução visual** (§10): as Eras marcadas disparam os estágios do Beco (com os marcos, §3.4).
-- Reset na **Nova Dinastia** (§6): `eraMaisAlta` volta a 1.
+  o **cruzamento ao vivo**, não a hidratação (a hidratação sincroniza a Era **em silêncio**, sem lump
+  nem fanfarra, mesmo que o offline tenha cruzado Eras).
+- **Evolução visual = troca do mundo inteiro por Era** (§4.6.5): cada Era troca o backdrop fixo da
+  viewport (`--sky`). Substitui os "3 estágios do Beco" do §2 — não é o beco que melhora, é a escala
+  que sobe.
+- Reset na **Nova Dinastia** (§6): `eraMaisAlta` volta a 1 (pendente — a Nova Dinastia é o passo 7).
+- **Implementado (v0.5, passo 5):** `domain/era.ts` (+ testes), `data/eras.ts`, wiring na store
+  (`aplicarGanhoLifetime`), save (`eraMaisAlta` opcional, sem bump de versão), HUD + fanfarra + céu.
 
 ---
 
@@ -487,14 +507,13 @@ export const BUILDINGS = [
     id: 'caixa_papelao',
     nome: 'Caixa de Papelão',
     descricao: 'O berço de toda grande civilização felina.',
-    tipoGato: 'gato_de_rua',
+    tipoGato: 'rua',
     custoBasePorGato: 15,
     producaoPorGato: 0.1,
     desbloqueio: 0,               // peixes acumulados na run
     marcos: [10, 25, 50, 100],
-    icone: 'bld_caixa_n1.png',
-    fundoLane: 'bg_lane_caixa.png',
-    spriteGato: 'cat_rua.png',
+    // arte (ícone da lane, fundo, sprite do gato) mora em ui/buildingArt.ts (id → asset),
+    // não aqui — nomes de arquivo são livres desde v0.5 (ART_STYLE §7). Prédio tem 1 ícone só.
   },
   // ...
 ] as const;
@@ -549,7 +568,8 @@ Maré Alta (disparar uma Habilidade ativa durante o Festival) · Bigode Supremo 
 os "gatos nomeados" **são** os Artefatos — coleção convergente de Lendários comprada com a moeda de
 prestígio via sorteio + reroll + upgrade. Detalhes (elenco, perks, tiers, moeda) travados pra
 **sessão de grelha dedicada** (§4.6.8). ·
-Miadópolis e demais distritos (são os **grandes saltos da escada de Eras**, §4.5 — o trecho fora do Beco) ·
+**Esticar a escada de Eras** (§4.5): o slice comprime beco → galáxia em 6 degraus; o jogo completo
+insere **mais Eras *entre* estes** (mais vilas/cidades/impérios intermediários), não um teto novo ·
 Ronrons e Influência (só se virarem decisão, não número) ·
 raridades · árvore de legado · mais eventos e habilidades ativas · som ·
 animações de trabalho e celebração · migração para Phaser/Canvas se as lanes exigirem ·
@@ -568,3 +588,7 @@ animações de trabalho e celebração · migração para Phaser/Canvas se as la
 | 2026-07-14 | **v0.4 — Passivas de Clique (ADR-0002)** | Grelha: passivas de prédio deixam de ser idle-only e ganham 2 sabores (Produção / Clique) que competem pelos mesmos peixes; 4 arquétipos no slice (P1 mult prédio, P2 escala com enxame, C1 mult clique, C2 colheita de %prod), P3/C3 no backlog. Clique = %(produção) via `CLICK_FACTOR_efetivo × mult_clique`, nunca fixo; passiva de clique é invisível offline. Reescreve §3.4/§3.5, redefine "Habilidade passiva" no CONTEXT (Passiva de Produção / de Clique) |
 | 2026-07-15 | **v0.5 — + §4.6 Arquitetura de progressão do jogo completo** | Grelha: como escalar dos 4 prédios-piloto pra um jogo longevo. **Prédios ≠ Eras** (prédio = trabalho; Era = escala). Modelo **empilhado (A)** (nada some na run, todas as lanes visíveis). **Fórmula global de curva** (números por função, não feeling). **Decoração-fundo + arquétipos** (~4-5 papéis; espetáculo, não puzzle). **Era vira multiplicador global temporário** (revê o lump do §4.5 no jogo completo; pacing serrote). **Dinastia = reset-com-recompensa** (progressão-replay). **Gatos Lendários** concretizam os Artefatos do §6/§13 (coleção convergente, sorteio+reroll+upgrade, perk permanente por papel, Eras destravam tiers do pool). Detalhes dos Lendários → sessão dedicada (§4.6.8). Notas de reference no §4.5, §6, §13 |
 | 2026-07-15 | **Modelo visual da Era (§4.6.5) — mundo fixo + fundo bespoke por Era** | Testado no app real: **mundo escuro fixo** (`sky_beco.png` na viewport, `.skybg` fixed) com UI clara flutuando por cima; scroll único natural. Versão "app claro + moldura escura com scroll aninhado" foi **rejeitada** (destoava + scroll estranho). **Props abandonados** (prototipados e descartados — comiam tela, pior no mobile). Cada Era passa a ter **1 fundo detalhado bespoke** que troca o mundo inteiro ao cruzar. Código: `App.tsx` + `styles.css` (`.skybg`); pendente Era→imagem quando houver Era-detection |
+| 2026-07-15 | **Eras do Império implementadas (passo 5, §4.5)** | Sistema completo: `domain/era.ts` (`nivelDaEra`, `lumpDaEra`, puros + testes), `data/eras.ts` (escada + limiares + constantes de lump), store (`aplicarGanhoLifetime` centraliza tick+clique, detecta cruzamento, paga lump, arma fanfarra), save (`eraMaisAlta` opcional, **sem bump de versão** — preserva saves), HUD (badge de Era), fanfarra que some sozinha, céu por Era (`ui/eraArt.ts`, fallback no `sky_beco`). Decisões de implementação: **lump entra só em peixes, não no `lifetime`** (não encadeia Era de graça; mantém a escada/prestígio dirigidos por produção genuína); **hidratação sincroniza a Era em silêncio** (sem lump/fanfarra) |
+| 2026-07-15 | **Eras = escada de escala inteira, não "Eras do Beco"** | Direção do usuário: as Eras **sobem de escala** (beco → vila → cidade → metrópole → império → galáxia), não são seis sabores do beco. Puxa **Miadópolis e o nível galáctico do §13 pra dentro da escada do slice**; o backlog vira "esticar a escada" (mais Eras *entre* estas), não "distritos além do Beco". `Era` ganha campo `escala` (degrau legível) separado de `nome` (o trocadilho). Escada final: Beco Esquecido · Vila do Ronrom · Gatópolis · Miadópolis · Império dos Bigodes · Via-Láctea Felina. Revê §2, §4.5, §13. Prompts dos 5 céus entregues (bloco de mundo de fundo, variação do §5.3 do ART_STYLE) |
+| 2026-07-15 | **Eras — arte ligada + polimento da fanfarra** | Os **5 céus das Eras 2–6** gerados (variam a hora do dia: amanhecer → dia → entardecer → crepúsculo → cósmico) e ligados no `ui/eraArt.ts` (arquivos vieram com prefixo `cat_*`, mapeados em código). Império **refeito** pra capital futurista planetária (não regredir a tecnologia depois da Metrópole — lição no ART_STYLE §5.5). **Scrim** no `.skybg` (degradê escuro topo/base) pra a UI clara ler sobre céus claros. **Fanfarra de troca de Era** ganhou VFX **em código** (raios dourados girando + burst de moedas/peixes/brilhos, reusando sprites — zero asset novo), memoizado por Era e respeitando `prefers-reduced-motion`. Só código/arte, sem mudança de regra |
+| 2026-07-15 | **Mudança visual de prédio por marco — descontinuada (documentando decisão de grelha antiga)** | Registro de uma decisão de grelha que nunca tinha sido escrita: os marcos **não** mudam mais o sprite do prédio (o antigo "nível 1→2 em 25 gatos, 2→3 em 100" saiu), junto com os **"3 estágios do Beco"**. A progressão visível (pilar §1) passa a ser **troca de mundo por Era** (§4.5/§4.6.5) + enxame enchendo a lane. Motivo: sprites por-nível são caros e de baixo retorno no modelo empilhado (§4.6.4). Reconcilia §1, §2, §3.4, ART_STYLE §7, CONTEXT e README — que ainda descreviam a feature como ativa. O marco hoje faz **só** abrir a passiva |

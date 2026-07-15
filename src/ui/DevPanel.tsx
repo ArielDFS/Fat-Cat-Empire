@@ -9,8 +9,9 @@
 
 import { useState } from "react";
 import type { CSSProperties } from "react";
-import { useGame } from "../state/store";
+import { useGame, aplicarGanhoLifetime } from "../state/store";
 import { BUILDINGS } from "../data/buildings";
+import { LIMIARES, eraPorNivel } from "../data/eras";
 import { limparSave } from "../state/save";
 
 /** Marco mais alto de qualquer prédio — atingi-lo abre todas as passivas daquele prédio (§3.4). */
@@ -57,6 +58,18 @@ function desbloquearTudo() {
   });
 }
 
+/**
+ * Cruza a próxima Era AO VIVO (§4.5): empurra o lifetime logo além do próximo limiar pelo mesmo
+ * caminho do jogo (`aplicarGanhoLifetime`) — paga o lump e dispara a fanfarra de verdade.
+ */
+function cruzarProximaEra() {
+  useGame.setState((s) => {
+    const prox = LIMIARES.find((l) => l > s.lifetime);
+    if (prox === undefined) return {}; // já na última Era do slice
+    return aplicarGanhoLifetime(s, prox - s.lifetime + 1);
+  });
+}
+
 /** Zera a run (inclui o save) — testa progressão do zero. */
 function zerarRun() {
   limparSave();
@@ -66,7 +79,9 @@ function zerarRun() {
     coroas: 0,
     gatos: gatosZerados(),
     habilidades: [],
+    eraMaisAlta: 1,
     ganhoOffline: null,
+    eraFanfarra: null,
   });
 }
 
@@ -115,6 +130,7 @@ export function DevPanel() {
   const peixes = useGame((s) => s.peixes);
   const lifetime = useGame((s) => s.lifetime);
   const coroas = useGame((s) => s.coroas);
+  const eraMaisAlta = useGame((s) => s.eraMaisAlta);
 
   if (!aberto) {
     return (
@@ -163,6 +179,11 @@ export function DevPanel() {
         Só revelar prédios
       </button>
 
+      <span style={S.label}>Eras</span>
+      <button style={{ ...S.btnWide, background: "#C9B4FF" }} onClick={cruzarProximaEra}>
+        Cruzar próxima Era (ao vivo)
+      </button>
+
       <span style={S.label}>Reset</span>
       <button style={S.btnDanger} onClick={zerarRun}>Zerar run + save</button>
 
@@ -170,6 +191,7 @@ export function DevPanel() {
         🐟 {peixes.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
         {" · "}👑 {coroas}
         <br />lifetime {lifetime.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+        <br />Era {eraMaisAlta} — {eraPorNivel(eraMaisAlta).nome}
       </div>
     </div>
   );
