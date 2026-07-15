@@ -88,7 +88,7 @@ o jogador compra **gatos** dentro dele. Os prédios diferem pela **produção po
 |---|---|---|---|---|---|
 | 1 | Caixa de Papelão | gatos de rua | 15 | 0,1 | 0 (inicial) |
 | 2 | Barraca de Peixe | pescadores | 100 | 1 | 250 |
-| 3 | Peixaria do Beco | peixeiros | 1.100 | 8 | 8.000 |
+| 3 | Miaurcado | feirantes | 1.100 | 8 | 8.000 |
 | 4 | Banco do Atum | banqueiros | 12.000 | 47 | 120.000 |
 
 > Limiares de desbloqueio são alvo de balanceamento (§8), não sagrados como as constantes de §3.1.
@@ -101,27 +101,55 @@ A cada marco de gatos **do mesmo prédio**, duas coisas acontecem:
 marcos = [10, 25, 50, 100]
 ```
 
-1. **Destrava uma Habilidade passiva** daquele prédio — uma melhoria **comprável** (com peixes)
-   que multiplica a produção do prédio (tipicamente ×2). É o modelo Cookie Clicker/Clicker Heroes:
-   o marco *abre* o upgrade, o jogador *compra*. Teto no slice: ×16 por prédio (4 marcos).
+1. **Destrava uma Habilidade passiva** daquele prédio — uma melhoria **comprável** (com peixes):
+   o marco *abre*, o jogador *compra* (modelo Cookie Clicker/Clicker Heroes). As passivas vêm em
+   **dois sabores que competem pelos mesmos peixes** (ver [ADR-0002](docs/adr/0002-passiva-de-clique.md)):
+   - **Passiva de Produção** — buffa a produção idle daquele prédio. Rende presente **e** ausente.
+     Motor da **Build idle**.
+   - **Passiva de Clique** — aumenta o **poder de clique** (efeito global, apesar de morar no prédio).
+     **Invisível offline** (não rende ausente). Motor da **Build ativa**.
 2. **Dispara a mudança visual** do prédio: nível 1 → 2 em 25 gatos, nível 2 → 3 em 100.
 
 > **Decisão de design (v0.2):** isto **funde** os antigos "Upgrades" (§3.6 do v0.1) e o antigo
 > "dobra automática por marco" (§3.4 do v0.1) num **único** sistema — habilidade passiva
 > comprável, destravada por marco. Um sistema a menos.
 
-Exemplos de Habilidade passiva (nomes/valores ajustáveis):
-Papelão Reforçado · Isca Premium · Gerente Sonolento · Reunião que Poderia Ser um Miado.
+**Arquétipos no slice (4)** — a variedade vem daqui, não de "todas ×2" (ADR-0002):
+
+| Cód | Pool | Efeito | Inspiração |
+|---|---|---|---|
+| P1 | Produção | Multiplicador do prédio (×1,2 / ×1,5 / ×2) | CC — upgrades de prédio |
+| P2 | Produção | Escala com o enxame (+X% de produção por gato daquele prédio) | CC — "Thousand Fingers"/"Fortune" |
+| C1 | Clique | Multiplicador de clique (×1,5 / ×2, global) | CH — click damage |
+| C2 | Clique | Clique colhe +X% da produção/s (sobe o `CLICK_FACTOR` efetivo) | CC — "clicking gains +% of CpS" |
+
+> **Fora do slice (backlog §13):** sinergia entre prédios (P3) e clique crítico (C3) — cada um é
+> "mais um sistema", adiado pelo antipilar (§1). Valores dos 4 arquétipos são balanceamento (§8).
+
+**Distribuição pelos 16 slots (§8, ajustável no playtest):** meta **8 Produção / 8 Clique** —
+- **Clique lidera:** a 1ª passiva do jogo (Caixa m10) é de Clique, "presenteando" o clique de
+  bootstrap (§8: ~20 cliques pro 1º gato) e fazendo o eixo ativo aparecer **antes** da 1ª parede.
+- **Idle nunca fica com marco morto:** todo prédio tem uma Passiva de Produção até o m25 (a de
+  Clique não rende offline, então não pode ser a única recompensa cedo de um prédio).
+- **Personalidade de prédio:** Miaurcado puxa idle, Banco puxa clique — a escolha de *onde* investir
+  vira parte do build.
 
 ### 3.5 Clique e Habilidades ativas — o eixo *clicker*
 
 O clique é um **eixo de progressão legítimo** (ADR-0001), não mais um resíduo. Base:
 
 ```
-peixes_por_clique = max(1, producao_por_segundo * CLICK_FACTOR)
+peixes_por_clique = max(1, prod_por_segundo * CLICK_FACTOR_efetivo * mult_clique)
+CLICK_FACTOR_efetivo = CLICK_FACTOR + Σ bônus_de_colheita (C2)
+mult_clique          = Π multiplicadores das Passivas de Clique compradas (C1)
 ```
 
-O poder do clique ganha vida através de **Habilidades ativas**: efeitos acionáveis, com cooldown,
+O clique é **sempre uma fração da produção**, nunca um "+N fixo" — é isso que o impede de ficar
+obsoleto conforme a produção cresce (ADR-0002). As **Passivas de Clique** (C1, C2, §3.4) são a via
+*passiva* de escalar o clique; elas só valem **presente** (invisíveis offline, §7), então mantêm a
+build ativa lastreada em produção sem quebrar "idle rende melhor ausente".
+
+O **pico** do clique ganha vida através de **Habilidades ativas**: efeitos acionáveis, com cooldown,
 hospedados em **prédios específicos**, que dão um *burst* de peixes por clique numa janela curta.
 
 Exemplos (ajustáveis): **Maré de Peixe** (Barraca — clique ×5 por 15s, cooldown 90s).
@@ -406,7 +434,9 @@ Maré Alta (disparar uma Habilidade ativa durante o Festival) · Bigode Supremo 
 Miadópolis e demais distritos (são os **grandes saltos da escada de Eras**, §4.5 — o trecho fora do Beco) ·
 Ronrons e Influência (só se virarem decisão, não número) ·
 raridades · árvore de legado · mais eventos e habilidades ativas · som ·
-animações de trabalho e celebração · migração para Phaser/Canvas se as lanes exigirem.
+animações de trabalho e celebração · migração para Phaser/Canvas se as lanes exigirem ·
+**arquétipos de passiva além dos 4 do slice (ADR-0002):** P3 **sinergia entre prédios** (prédio A
++X% por prédio B) e C3 **clique crítico** (chance de clique dar ×N).
 
 ---
 
@@ -417,3 +447,4 @@ animações de trabalho e celebração · migração para Phaser/Canvas se as la
 | 2026-07-13 | v0.1 — escopo travado do slice | Documento inicial derivado do plano conceitual |
 | 2026-07-13 | **v0.2 — reestruturação do modelo** | Grelha: prédios fixos + gatos como unidade comprável; híbrido idle+clicker (ADR-0001); sistema único de Habilidades (passiva/ativa) funde upgrades e marcos; decisão real vira build ativa-vs-idle; artefatos → endgame; layout de lanes estilo Cookie Clicker; §8 revisado |
 | 2026-07-14 | **v0.3 — + §4.5 Eras do Império** | Grelha: sensação de avanço civilizacional sem economia nova. Grau nomeado por run, dirigido pelo `lifetime`; cruzar Era dá título + lump de peixes + fanfarra e (em Eras marcadas) o estágio visual do Beco. Escada desenhada até o interplanetário, **unificando os distritos do §13**; slice constrói só as ~6 Eras do Beco (granulares > 4 prédios, pra beats entre desbloqueios). Entra no §2 (Dentro) e no §10 (passo 5) |
+| 2026-07-14 | **v0.4 — Passivas de Clique (ADR-0002)** | Grelha: passivas de prédio deixam de ser idle-only e ganham 2 sabores (Produção / Clique) que competem pelos mesmos peixes; 4 arquétipos no slice (P1 mult prédio, P2 escala com enxame, C1 mult clique, C2 colheita de %prod), P3/C3 no backlog. Clique = %(produção) via `CLICK_FACTOR_efetivo × mult_clique`, nunca fixo; passiva de clique é invisível offline. Reescreve §3.4/§3.5, redefine "Habilidade passiva" no CONTEXT (Passiva de Produção / de Clique) |

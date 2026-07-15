@@ -7,7 +7,7 @@
  * ao contrário das constantes `[TRAVADO]` de §3.1.
  */
 
-export type TipoGato = "rua" | "pescador" | "peixeiro" | "banqueiro";
+export type TipoGato = "rua" | "pescador" | "feirante" | "banqueiro";
 
 export interface Building {
   /** Casa com o nome dos assets (ex.: bld_caixa_n1.png, cat_rua.png). */
@@ -47,10 +47,10 @@ export const BUILDINGS: readonly Building[] = [
     marcos: [10, 25, 50, 100],
   },
   {
-    id: "peixaria_beco",
-    nome: "Peixaria do Beco",
-    descricao: "Atacado de sardinha. Cheiro forte, lucro mais forte.",
-    tipoGato: "peixeiro",
+    id: "miaurcado",
+    nome: "Miaurcado",
+    descricao: "O mercado do beco: peixe, fruta e fofoca no mesmo balcão.",
+    tipoGato: "feirante",
     custoBasePorGato: 1_100,
     producaoPorGato: 8,
     desbloqueio: 8_000,

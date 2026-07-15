@@ -23,6 +23,8 @@ export interface SaveData {
   lifetime: number;
   coroas: number;
   gatos: Record<string, number>;
+  /** Ids das Habilidades passivas compradas na run (§3.4). Ausente em saves v0.3 → []. */
+  habilidades: string[];
 }
 
 /** O que a store fornece; `versao` e `ts` são carimbados aqui. */
@@ -56,7 +58,13 @@ export function carregarSave(): SaveData | null {
       data.gatos !== null;
     if (!ok) return null;
 
-    return data as SaveData;
+    // `habilidades` (§3.4) entrou depois: saves anteriores não têm o campo → default [].
+    // Aceita só strings; a store descarta ids desconhecidos (normalizarHabilidades).
+    const habilidades = Array.isArray(data.habilidades)
+      ? data.habilidades.filter((x): x is string => typeof x === "string")
+      : [];
+
+    return { ...(data as SaveData), habilidades };
   } catch {
     return null; // JSON corrompido ou LocalStorage inacessível.
   }

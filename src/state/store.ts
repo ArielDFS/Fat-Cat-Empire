@@ -8,8 +8,17 @@
 import { create } from "zustand";
 import { BUILDINGS } from "../data/buildings";
 import type { Building } from "../data/buildings";
-import { CLICK_FACTOR } from "../domain/constants";
+import { abilityPorId, abilitiesDoPredio, poolDe } from "../data/abilities";
+import type { PassiveAbility, EfeitoPassiva } from "../data/abilities";
 import { custoDeVariosGatos } from "../domain/cost";
+import {
+  habilidadeDesbloqueada,
+  multiplicadorProducao,
+  multiplicadorClique,
+  bonusColheita,
+} from "../domain/abilities";
+import type { EfeitoProducao, EfeitoClique } from "../domain/abilities";
+import { peixesPorClique } from "../domain/click";
 import { producaoPorSegundo } from "../domain/production";
 import type { PredioProdutor } from "../domain/production";
 import { calcularGanhoOffline } from "../domain/offline";
@@ -21,6 +30,19 @@ function gatosZerados(): Record<string, number> {
   const g: Record<string, number> = {};
   for (const b of BUILDINGS) g[b.id] = 0;
   return g;
+}
+
+/** Descarta ids de habilidade desconhecidos e duplicatas de um save (robusto a conteúdo antigo). */
+function normalizarHabilidades(salvas: readonly string[]): string[] {
+  const vistas = new Set<string>();
+  const out: string[] = [];
+  for (const id of salvas) {
+    if (abilityPorId(id) && !vistas.has(id)) {
+      vistas.add(id);
+      out.push(id);
+    }
+  }
+  return out;
 }
 
 /**
@@ -37,12 +59,48 @@ function normalizarGatos(salvos: Record<string, number>): Record<string, number>
   return base;
 }
 
+/** Ponte data → domain: os efeitos das passivas compradas (opcionalmente filtradas por prédio). */
+function efeitosComprados(
+  habilidades: readonly string[],
+  buildingId?: string,
+): EfeitoPassiva[] {
+  const out: EfeitoPassiva[] = [];
+  for (const id of habilidades) {
+    const a = abilityPorId(id);
+    if (a && (buildingId === undefined || a.buildingId === buildingId)) out.push(a.efeito);
+  }
+  return out;
+}
+
+/**
+ * Multiplicador de PRODUÇÃO de um prédio (P1 × P2, §3.7). Depende dos gatos porque o P2 escala
+ * com o enxame. Passivas de clique daquele prédio são ignoradas aqui — elas vão pro clique global.
+ */
+function multProducaoDoPredio(
+  buildingId: string,
+  habilidades: readonly string[],
+  qtdGatos: number,
+): number {
+  const producao = efeitosComprados(habilidades, buildingId).filter(
+    (e): e is EfeitoProducao => poolDe(e) === "producao",
+  );
+  return multiplicadorProducao(producao, qtdGatos);
+}
+
+/** Efeitos de clique de TODAS as passivas compradas (o clique é global, ADR-0002). */
+function efeitosCliqueGlobais(habilidades: readonly string[]): EfeitoClique[] {
+  return efeitosComprados(habilidades).filter((e): e is EfeitoClique => poolDe(e) === "clique");
+}
+
 /** Traduz o estado bruto para o formato que `domain/production` entende. */
-function produtores(gatos: Record<string, number>): PredioProdutor[] {
+function produtores(
+  gatos: Record<string, number>,
+  habilidades: readonly string[],
+): PredioProdutor[] {
   return BUILDINGS.map((b) => ({
     prodPorGato: b.producaoPorGato,
     qtdGatos: gatos[b.id] ?? 0,
-    habilidadesPassivasMult: 1, // sem habilidades ainda (passo 5-6)
+    habilidadesPassivasMult: multProducaoDoPredio(b.id, habilidades, gatos[b.id] ?? 0),
   }));
 }
 
@@ -51,6 +109,8 @@ export interface GameState {
   lifetime: number;
   coroas: number;
   gatos: Record<string, number>;
+  /** Ids das Habilidades passivas já compradas na run (§3.4). Reseta na Nova Dinastia (futuro). */
+  habilidades: string[];
 
   /** Ganho da última ausência, enquanto o modal de retorno está aberto (null = sem modal). */
   ganhoOffline: GanhoOffline | null;
@@ -59,6 +119,8 @@ export interface GameState {
 
   /** Compra `quantidade` gatos de um prédio, se der pra pagar. */
   comprarGatos: (buildingId: string, quantidade: number) => void;
+  /** Compra uma Habilidade passiva destravada por marco, se der pra pagar (§3.4). */
+  comprarHabilidade: (abilityId: string) => void;
   /** Um clique manual no peixe grande. */
   clicar: () => void;
   /** Avança a produção passiva por `dtSegundos` de tempo real. */
@@ -76,6 +138,7 @@ export const useGame = create<GameState>((set, get) => ({
   lifetime: 0,
   coroas: 0,
   gatos: gatosZerados(),
+  habilidades: [],
   ganhoOffline: null,
   hidratado: false,
 
@@ -92,6 +155,18 @@ export const useGame = create<GameState>((set, get) => ({
       peixes: s.peixes - custo,
       gatos: { ...s.gatos, [buildingId]: possui + quantidade },
     });
+  },
+
+  comprarHabilidade: (abilityId) => {
+    const s = get();
+    const a = abilityPorId(abilityId);
+    if (!a) return; // habilidade desconhecida
+    if (s.habilidades.includes(abilityId)) return; // já comprada
+    const b = BUILDINGS.find((x) => x.id === a.buildingId);
+    if (!b || !predioDesbloqueado(b, s.lifetime)) return; // prédio ainda oculto
+    if (!habilidadeDesbloqueada(s.gatos[a.buildingId] ?? 0, a.marco)) return; // marco não atingido
+    if (s.peixes < a.custo) return; // sem peixes
+    set({ peixes: s.peixes - a.custo, habilidades: [...s.habilidades, abilityId] });
   },
 
   clicar: () => {
@@ -122,6 +197,7 @@ export const useGame = create<GameState>((set, get) => ({
       lifetime: save.lifetime,
       coroas: save.coroas,
       gatos: normalizarGatos(save.gatos),
+      habilidades: normalizarHabilidades(save.habilidades),
     };
 
     // A produção que alimenta o offline precisa ser a EFETIVA (com coroas já embutidas),
@@ -139,7 +215,13 @@ export const useGame = create<GameState>((set, get) => ({
 
   salvar: () => {
     const s = get();
-    gravarSave({ peixes: s.peixes, lifetime: s.lifetime, coroas: s.coroas, gatos: s.gatos });
+    gravarSave({
+      peixes: s.peixes,
+      lifetime: s.lifetime,
+      coroas: s.coroas,
+      gatos: s.gatos,
+      habilidades: s.habilidades,
+    });
   },
 
   fecharModalOffline: () => set({ ganhoOffline: null }),
@@ -156,14 +238,15 @@ export function predioDesbloqueado(b: Building, lifetime: number): boolean {
   return lifetime >= b.desbloqueio;
 }
 
-type EstadoProducao = Pick<GameState, "gatos" | "coroas">;
+type EstadoProducao = Pick<GameState, "gatos" | "coroas" | "habilidades">;
 
 export function prodPorSegundo(s: EstadoProducao): number {
-  return producaoPorSegundo(produtores(s.gatos), s.coroas);
+  return producaoPorSegundo(produtores(s.gatos, s.habilidades), s.coroas);
 }
 
 export function poderDeClique(s: EstadoProducao): number {
-  return Math.max(1, prodPorSegundo(s) * CLICK_FACTOR);
+  const clique = efeitosCliqueGlobais(s.habilidades);
+  return peixesPorClique(prodPorSegundo(s), multiplicadorClique(clique), bonusColheita(clique));
 }
 
 export function custoDaCompra(
@@ -174,4 +257,38 @@ export function custoDaCompra(
   const b = BUILDINGS.find((x) => x.id === buildingId);
   if (!b) return Number.POSITIVE_INFINITY;
   return custoDeVariosGatos(b.custoBasePorGato, gatos[buildingId] ?? 0, quantidade);
+}
+
+/**
+ * Multiplicador de PRODUÇÃO atual de um prédio (badge da lane). Inclui o P2, que escala com os
+ * gatos — por isso precisa da contagem. 1 = nenhuma passiva de produção comprada.
+ */
+export function multiplicadorProducaoDoPredio(
+  habilidades: readonly string[],
+  buildingId: string,
+  qtdGatos: number,
+): number {
+  return multProducaoDoPredio(buildingId, habilidades, qtdGatos);
+}
+
+/** Uma habilidade passiva enriquecida com o estado dela na run, para a UI da loja. */
+export interface HabilidadeUI extends PassiveAbility {
+  /** Marco atingido (qtd de gatos >= marco) — a compra está aberta. */
+  desbloqueada: boolean;
+  /** Já foi comprada nesta run. */
+  comprada: boolean;
+}
+
+/** Habilidades passivas de um prédio com desbloqueio/compra resolvidos (§3.4). */
+export function habilidadesDoPredio(
+  buildingId: string,
+  gatos: Record<string, number>,
+  habilidades: readonly string[],
+): HabilidadeUI[] {
+  const qtd = gatos[buildingId] ?? 0;
+  return abilitiesDoPredio(buildingId).map((a) => ({
+    ...a,
+    desbloqueada: habilidadeDesbloqueada(qtd, a.marco),
+    comprada: habilidades.includes(a.id),
+  }));
 }

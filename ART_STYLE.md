@@ -1,11 +1,12 @@
 # ART_STYLE.md — Fat Cat Empire (codinome: Império Felino)
 
 > **Dois tracks, duas fontes de consistência.**
-> **World/UI** (prédios, lanes, ícones, VFX) é *Chunky Flat Cartoon*: a consistência vem da
+> **World/UI** (ícones de UI, VFX, cenário do beco) é *Chunky Flat Cartoon*: a consistência vem da
 > **restrição** — paleta travada imposta pelo `normalize_asset.py` (§8).
-> **Character** (os gatos) é *Detailed Character*: a consistência vem de um **style block e uma
-> proporção compartilhados** (§5.2), com cor **livre por tipo**. Gato **não** passa pela quantização.
-> É a combinação dos dois que faz o jogo parecer coeso sem achatar os personagens.
+> **Detailed** (gatos, **prédios** e fundos de lane) é renderizado: a consistência vem de um
+> **style block, uma proporção e o contorno escuro `#241C2E` compartilhados** — com **cor livre por
+> asset**. Não passa pela quantização.
+> É a combinação dos dois que faz o jogo parecer coeso sem achatar os assets ilustrados.
 
 ---
 
@@ -13,11 +14,17 @@
 
 | Track | Cobre | Estilo | Pipeline | Consistência vem de |
 |---|---|---|---|---|
-| **World/UI** | prédios, fundos de lane, ícones, VFX, cenário | Chunky Flat Cartoon (§1A) | gera → **quantiza** p/ paleta travada (§8) | a **paleta travada** (§2A) |
-| **Character** | os 4 gatos-tipo (rua, pescador, peixeiro, banqueiro) | Detailed Character (§1B) | gera bespoke → recorta/ancora, **sem quantizar** | **style block + proporção** (§5.2) |
+| **World/UI** | ícones de UI, VFX, cenário do beco | Chunky Flat Cartoon (§1A) | gera → **quantiza** p/ paleta travada (§8) | a **paleta travada** (§2A) |
+| **Detailed** | gatos-tipo, **prédios**, fundos de lane | Detailed (§1B, §5.2–§5.4) | gera bespoke → recorta/ancora, **sem quantizar** | **style block + proporção + contorno `#241C2E`** |
 
-Regra de decisão: **é um gato? → track Character.** Qualquer outra coisa → track World/UI.
-Nunca rode um gato pelo `--kind cat/lanecat` antigo (quantizaria e mataria o sombreado).
+Regra de decisão: **é um ícone de UI ou VFX pequeno?** → World/UI (flat, quantizado). **É ilustração
+(gato, prédio, lane)?** → Detailed (renderizado, **cor livre**, só o contorno `#241C2E` é obrigatório).
+
+> **Mudança v0.4 (paleta destravada nos prédios):** os prédios saíram do flat+quantizado e entraram
+> no track Detailed, pra ganharem **identidade de cor própria** (§2C) — antes convergiam pra
+> turquesa+laranja e ficavam indistinguíveis. O elo que segura a coesão passa a ser o **contorno
+> escuro + o estilo de render compartilhado**, não a paleta. A paleta travada segue mandando só em
+> **ícones de UI e VFX**.
 
 ---
 
@@ -64,7 +71,9 @@ indistinguíveis, simplifique o traje ou aumente o contraste de pelagem.
 ### 2A. World/UI `[TRAVADA]`
 
 Cada cor tem **exatamente uma sombra**. Dois tons por material. Zero gradiente. O `normalize_asset.py`
-impõe isto no track World/UI.
+impõe isto **nos ícones de UI, VFX e no cenário do beco** (o track flat). Para os assets **Detailed**
+(gatos, prédios, lanes) a paleta é só **guia de geração** — eles não quantizam; o único elo travado
+com o mundo é o contorno `#241C2E`.
 
 | Papel | Base | Sombra |
 |---|---|---|
@@ -92,11 +101,24 @@ livres, mas mantenha as **pelagens bem distintas**:
 |---|---|---|---|---|
 | **rua** | Caixa de Papelão | laranja/ruivo tigrado | bandana surrada + crachá de tampinha | laranja |
 | **pescador** | Barraca de Peixe | cinza-azulado tigrado | chapéu de chuva turquesa + capa de chuva amarela + vara | turquesa/amarelo |
-| **peixeiro** | Peixaria do Beco | creme/tigrado claro | avental rosa + chapéu de papel + peixe na mão | rosa |
+| **feirante** | Miaurcado | tigrado caramelo/castanho malhado | avental verde + camisa listrada + caixote de peixe e legumes + bolsa de moedas | verde |
 | **banqueiro** | Banco do Atum | preto/grafite elegante | gravata-borboleta dourada + monóculo | dourado |
 
-O contorno escuro (`#241C2E`) é o **único elo forçado** com o track World/UI — mantenha-o nos gatos
-pra eles não flutuarem sobre os prédios chapados.
+O contorno escuro (`#241C2E`) é o **único elo forçado** entre os tracks — mantenha-o nos gatos
+(e nos prédios, §2C) pra tudo pertencer ao mesmo mundo.
+
+### 2C. Identidade de cor por prédio (Detailed, não travada)
+
+Cada prédio tem uma **identidade de cor própria** — é o que os distingue de relance. **Não** caia no
+turquesa+laranja como padrão (foi o que deixou os 3 primeiros indistinguíveis). Silhueta **e** cor
+diferenciam (§1A + isto): um prédio deve ser reconhecível pela forma *e* pela cor.
+
+| Prédio | Identidade de cor | Vibe / silhueta |
+|---|---|---|
+| Caixa de Papelão | papelão kraft/marrom + laranja | abrigo improvisado, humilde — o começo |
+| Barraca de Peixe | turquesa + madeira | barraca de doca marítima |
+| **Miaurcado** | **verde + branco** (supermercado) | loja moderna de fachada de vidro — **não** vendinha |
+| Banco do Atum | dourado + mármore creme | banco imperial pomposo |
 
 ---
 
@@ -108,8 +130,8 @@ pra eles não flutuarem sobre os prédios chapados.
 |---|---|
 | **Contorno** | Espessura uniforme, ~8px em canvas de 1024. Nunca varia dentro do mesmo asset. |
 | **Sombreamento** | Cel shading, borda dura, 1 tom de sombra. Luz **sempre** do canto superior esquerdo, 45°. |
-| **Perspectiva** | Frontal com inclinação de ~15° de cima. Ortográfica. Sem ponto de fuga. Sem isométrico. |
-| **Prédios** | Base plana alinhada ao rodapé do canvas. Sem sombra projetada no asset (a sombra é feita no jogo, com uma elipse chapada). |
+| **Perspectiva** | (ícones/VFX) Frontal, centrado, ortográfico. **Prédios seguem o §5.4** (3/4 dimensional). |
+| **Prédios** | Movidos pro track **Detailed (§5.4, v0.4)**: vista 3/4 dimensional, cor livre. Base plana no rodapé, sem sombra projetada (a elipse é feita no jogo). |
 | **Fundo** | Sempre transparente (exceto fundo de lane, §5.1). Nenhum cenário embutido no sprite. |
 
 ### 3B. Character (detailed)
@@ -149,7 +171,9 @@ Se o modelo não gerar alpha, gere em chroma `#FF00FF` e deixe o script recortar
 
 ## 5. STYLE BLOCK — World/UI (sprite) `[TRAVADO]`
 
-Este bloco vai **verbatim** em *todo* prompt de sprite chapado (prédios, ícones, VFX). Só o `[SUBJECT]` muda.
+Este bloco vai **verbatim** em *todo* prompt de sprite chapado (ícones de UI, VFX). Só o `[SUBJECT]`
+muda. **Prédios saíram daqui** (v0.4) e usam o bloco Detailed do §5.4 — os exemplos de prédio abaixo
+ficam como legado histórico.
 
 ```
 Flat vector cartoon game asset. Thick uniform dark outline (#241C2E, ~8px at 1024).
@@ -226,7 +250,7 @@ signature, isometric view, detailed fur texture, anime, blush, multiple cats, cr
 |---|---|
 | `bg_lane_caixa` | `a grimy back-alley ground and low brick wall at night, empty alley floor and wall` |
 | `bg_lane_barraca` | `a wet cobblestone harbor dock floor with a low stone quay wall and scattered fish scales` |
-| `bg_lane_peixaria` | `a tiled fishmonger shop floor with a low counter base and puddles of melting ice` |
+| `bg_lane_miaurcado` | `a cobblestone street-market floor with a low stall counter base and scattered crates` |
 | `bg_lane_banco` | `a polished marble bank floor with a low golden baseboard and tuna-can column bases` |
 
 ---
@@ -260,7 +284,7 @@ deformed, extra limbs, blurry, text, watermark, signature, multiple characters, 
 |---|---|
 | **pescador** ✅ | `a fluffy blue-gray tabby fisherman cat wearing a teal rain hat and a rolled-up yellow raincoat, holding a small fishing rod with a fish on the line, cheerful confident expression, a tiny anchor pin on the coat` |
 | **rua** | `a scruffy orange tabby street cat with a slightly torn ear and a tiny scar over one eye, wearing a tattered orange bandana around the neck and a flattened bottle-cap pinned as a badge, holding a fish bone like a little trophy, cocky mischievous grin, streetwise confident swagger` |
-| **peixeiro** | `a cream-furred cat fishmonger wearing a pink apron and a folded paper hat, holding a fresh fish, proud friendly expression, sleeves rolled up` |
+| **feirante** ✅ | `a plump caramel-and-brown spotted tabby market-vendor cat wearing a green grocer's apron over a rolled-up striped shirt, a pencil tucked behind one ear and a coin pouch on the belt, holding a small wooden crate of fish and produce, warm cheerful salesman grin` |
 | **banqueiro** | `a sleek charcoal-black cat banker wearing a golden bow tie and a monocle, holding a gold coin, smug wealthy expression, groomed and dignified` |
 
 > **Regra de referência (§6B):** o pescador aprovado é a **âncora de estilo**. Gere os outros 3
@@ -316,12 +340,58 @@ o **material e a coisa** de cada lane. Cor sempre como **tom**, nunca como luz r
 |---|---|
 | `bg_lane_caixa` | `a grimy back-alley at night, weathered low brick wall, cracked cobblestone ground, a few scattered bottles and fish bones to one side, cool moody purple tones` |
 | `bg_lane_barraca` ✅ | `a wet cobblestone harbor dock at night, weathered stone quay wall, scattered fish scales, a coil of rope and a wooden crate to one side, faint shallow puddles with a subtle teal tint` |
-| `bg_lane_peixaria` | `a fishmonger shop floor, low tiled counter wall behind, scattered fish scales and thin puddles of melting ice, cool clean tones` |
+| `bg_lane_miaurcado` ✅ | `a cobblestone neighborhood street-market floor, a low market stall counter wall behind with a folded striped awning valance, a couple of stacked wooden crates and a few dropped fruits and fish scales to one side, warm earthy market tones with a soft orange tint` |
 | `bg_lane_banco` | `a polished marble bank floor, low ornate wall with a golden baseboard behind, a small stack of coins to one side, warm golden tones` |
 
 Pipeline: `python normalize_asset.py raw/bg_lane_barraca.png --out src/assets/ --kind lanehd` (redimensiona
 a tira **sem quantizar**). No jogo a lane repete a tira no eixo X (`background-repeat: repeat-x`), então
 a emenda invisível é obrigatória.
+
+---
+
+## 5.4 STYLE BLOCK — prédios detalhados `[TRAVADO]` (ATIVO para os prédios)
+
+Os prédios migraram do flat+quantizado (§5) pro track Detailed (v0.4, §0): render com volume e
+**cor livre por prédio** (§2C). O contorno escuro `#241C2E` e o estilo de render são o elo de coesão;
+a paleta travada **não** se aplica. Verbatim; só o `[SUBJECT]` muda. A **identidade de cor** de cada
+prédio vem de §2C — descreva-a no `[SUBJECT]` e **evite turquesa+laranja como padrão**.
+
+**Câmera `[TRAVADO]`:** vista **3/4 dimensional (levemente isométrica)** — frente dominante, **topo
+visível** e um **fio de lateral**. É o ângulo dos prédios existentes (Caixa, Barraca, Miaurcado);
+**não** é elevação 2D plana (fica chapada demais) **nem** isométrico extremo com a lateral inteira
+recuando. Meio-termo dimensional.
+
+```
+Polished mobile-game building illustration, a single structure, a gentle three-quarter dimensional
+view — front-dominant with the top slightly visible and just a hint of one side (a light isometric
+feel), no strong vanishing-point perspective. Bold dark outline (#241C2E), rich cel shading with soft gradients and rendered volume,
+chunky exaggerated cute proportions, oversized charming props, vibrant saturated colors. A DISTINCT
+color identity for this building — do NOT default to teal-and-orange. Flat base aligned to the bottom
+edge. Fully transparent background, no ground shadow, no scenery, no text, no watermark, centered,
+full structure in frame, not cropped.
+
+SUBJECT: [SUBJECT]
+```
+
+**Negative prompt:**
+
+```
+teal-and-orange by default, same colors as other buildings, flat 2D elevation, blueprint, flat
+vector, minimalist, plain, low detail, dull or washed-out colors, photorealistic, 3D render, gradient
+banding, drop shadow, ground shadow, scenery, background, text, watermark, signature,
+extreme isometric, full side wall receding, multiple buildings, cats, characters, cropped
+```
+
+### Exemplos de `[SUBJECT]` (prédios detalhados)
+
+Cor sempre puxando a **identidade do §2C**, para os prédios não convergirem.
+
+| Prédio | SUBJECT |
+|---|---|
+| Caixa de Papelão | `a humble improvised shelter built from stacked kraft cardboard boxes with duct tape and a crooked little fish flag, warm brown cardboard tones with orange accents, cozy and pathetic, the empire's starter home` |
+| Barraca de Peixe | `a wooden harbor fish stall with a teal-and-white striped canopy, hanging fish and a crate of ice, weathered wood and turquoise tones` |
+| **Miaurcado** ✅ | `a chunky cartoon neighborhood SUPERMARKET building, a flat modern storefront with big glass windows and automatic double glass doors, a wide blank sign board across the top with a little fish-and-leaf emblem (no lettering), a green-and-white color scheme with warm wood accents, a row of shopping carts out front, crates of fresh fish and produce visible through the windows, a small green entrance awning, clearly a proper store and NOT a market stall` |
+| Banco do Atum | `a pompous imperial bank building with marble columns shaped like tuna cans and a golden fish emblem on the pediment, cream marble and gold tones` |
 
 ---
 
@@ -365,9 +435,9 @@ recorta, ancora e redimensiona (§8). É aqui que a consistência do track chapa
 
 | Grupo | Itens | Track | Qtd |
 |---|---|---|---|
-| **Gatos-tipo (detalhados)** | rua, pescador, peixeiro, banqueiro | Character | 4 |
-| Prédios (ícone de lane) | 4 prédios × níveis 1 e 2 | World/UI | 8 |
-| Fundos de lane | 1 tira por prédio × 4 | World/UI | 4 |
+| **Gatos-tipo (detalhados)** | rua, pescador, feirante, banqueiro | Detailed (§5.2) | 4 |
+| Prédios (ícone de lane) | 4 prédios × níveis 1 e 2 | **Detailed (§5.4)** | 8 |
+| Fundos de lane | 1 tira por prédio × 4 | Detailed (§5.3) | 4 |
 | Cenário | fundo do beco em 3 estágios | World/UI | 3 |
 | Ícones | peixe, coroa, compra, habilidade, evento | World/UI | 5 |
 | VFX | peixe, moeda, confete, estrela | World/UI | 4 |
@@ -378,9 +448,9 @@ recorta, ancora e redimensiona (§8). É aqui que a consistência do track chapa
 ### Nomenclatura `[TRAVADA]`
 
 ```
-cat_rua.png            cat_pescador.png       cat_peixeiro.png       cat_banqueiro.png
+cat_rua.png            cat_pescador.png       cat_feirante.png       cat_banqueiro.png
 bld_caixa_n1.png       bld_caixa_n2.png       bld_barraca_n1.png     ...
-bg_lane_caixa.png      bg_lane_barraca.png    bg_lane_peixaria.png   bg_lane_banco.png
+bg_lane_caixa.png      bg_lane_barraca.png    bg_lane_miaurcado.png  bg_lane_banco.png
 bg_beco_e1.png         bg_beco_e2.png         bg_beco_e3.png
 icon_peixe.png         icon_coroa.png         ...
 vfx_confete.png        ...
@@ -440,3 +510,6 @@ preservadas. Todo o resto (recorte, apara, âncora, resize) roda igual.
 | 2026-07-14 | **+ §5.1 STYLE BLOCK de fundo/cenário** — bloco travado para lane backgrounds (opaco, tileável, paleta reduzida) |
 | 2026-07-14 | **+ §5.3 STYLE BLOCK de fundo de lane detalhado** — lanes migram pro track Detailed (renderizado, `--kind lanehd`, sem quantizar). Fix validado contra o erro real (luz direcional/atmosférica dava salto de brilho na emenda ao repetir): **luz plana e uniforme edge-to-edge** + cor como tom, não luz refletida, no `[SCENE]`; bordas idênticas. Composição chão + parede baixa mantida. §5.1 chapado vira fallback |
 | 2026-07-14 | **v0.3 — dois tracks de arte.** Gatos migram de "flat + `cat_base`+uniforme composto a 40px" para **Detailed Character**: 1 ilustração bespoke por tipo (§5.2, aprovado no piloto do pescador), export ~112px, enxame reduzido (~12/lane), **sem quantização** (`--kind charcat`). World/UI segue chapado e quantizado. Adiciona §0 (tracks), §1B, §2B, §3B, §5.2, §6B, §9B; revê §4, §7, §8 |
+| 2026-07-14 | **3º prédio vira Miaurcado** (era Peixaria do Beco): tipo de gato `peixeiro`→`feirante` (tigrado caramelo, avental verde). Assets entregues como `market.png` (ícone), `lane_market.png` (fundo) e `cat_feirante.png` (gato). Atualiza §0, §2B, §5.1, §5.2, §5.3, §7 |
+| 2026-07-14 | **v0.4 — paleta destravada nos prédios.** Prédios saem do flat+quantizado e entram no track **Detailed** (§5.4), com **identidade de cor própria por prédio** (§2C) — antes convergiam pra turquesa+laranja e ficavam indistinguíveis. Coesão passa a vir do **contorno `#241C2E` + estilo de render**, não da paleta; a paleta travada fica só nos **ícones/VFX**. Miaurcado especificado como **supermercado** (fachada de vidro, carrinhos), não vendinha. Reescreve §0, §2A; adiciona §2C, §5.4; revê §7 |
+| 2026-07-14 | **Câmera dos prédios = 3/4 dimensional (levemente isométrica).** Correção: o "sem isométrico / frontal 15°" do §3A não batia com os prédios reais (Caixa/Barraca têm topo e lateral visíveis). Adotado o ângulo dimensional que **casa** com os existentes; elevação 2D plana e isométrico extremo ficam no negative. Ajusta §3A e a câmera do §5.4 |

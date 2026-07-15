@@ -57,9 +57,21 @@ por clique numa janela curta. É o motor da **Build ativa**.
 _Avoid_: skill, magia, spell, poder, ability.
 
 **Habilidade passiva**:
-Melhoria **permanente** destravada ao atingir um **marco de gatos** num Prédio; buffa a produção
-passiva daquele Prédio. É o motor da **Build idle**.
+Melhoria **permanente e comprável** destravada ao atingir um **marco de gatos** num Prédio. Vem em
+dois sabores — **Passiva de Produção** e **Passiva de Clique** — que competem pelos mesmos Peixes.
+Não é mais sinônimo de "Build idle": a de Produção alimenta a idle, a de Clique alimenta a ativa.
 _Avoid_: upgrade (ambíguo com o sistema antigo do v0.1), buff.
+
+**Passiva de Produção**:
+Habilidade passiva que multiplica a **produção passiva** daquele Prédio (idle). Rende presente **e**
+ausente. É o motor da **Build idle**. Ver [ADR-0002](docs/adr/0002-passiva-de-clique.md).
+_Avoid_: passiva de idle, upgrade de produção.
+
+**Passiva de Clique**:
+Habilidade passiva que aumenta o **poder de clique** (efeito **global**, apesar de morar num Prédio).
+**Invisível offline** — não rende ausente —, o que a mantém no eixo ativo sem quebrar "idle rende
+melhor ausente". É um dos motores da **Build ativa**. Ver [ADR-0002](docs/adr/0002-passiva-de-clique.md).
+_Avoid_: buff de clique, upgrade de clique.
 
 ## Recursos
 
