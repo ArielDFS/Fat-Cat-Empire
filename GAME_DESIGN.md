@@ -87,11 +87,13 @@ o jogador compra **gatos** dentro dele. Os prédios diferem pela **produção po
 | # | Prédio | Tipo de gato | Custo base/gato | Produção/gato (peixes/s) | Desbloqueio (peixes acum.) |
 |---|---|---|---|---|---|
 | 1 | Caixa de Papelão | gatos de rua | 15 | 0,1 | 0 (inicial) |
-| 2 | Barraca de Peixe | pescadores | 100 | 1 | 250 |
+| 2 | Barraca de Peixe | peixeiros | 100 | 1 | 250 |
 | 3 | Miaurcado | feirantes | 1.100 | 8 | 8.000 |
-| 4 | Banco do Atum | banqueiros | 12.000 | 47 | 120.000 |
+| 4 | Píer de Pesca | pescadores | 12.000 | 47 | 120.000 |
 
 > Limiares de desbloqueio são alvo de balanceamento (§8), não sagrados como as constantes de §3.1.
+> Os 4 prédios acima são **pilotos** — o plano é acrescentar muitos mais em ordem de custo crescente
+> (o Píer, ex-Banco do Atum, não é o teto da escada). Ver ART_STYLE §2C.
 
 ### 3.4 Marcos e Habilidades passivas
 
@@ -131,7 +133,7 @@ marcos = [10, 25, 50, 100]
   bootstrap (§8: ~20 cliques pro 1º gato) e fazendo o eixo ativo aparecer **antes** da 1ª parede.
 - **Idle nunca fica com marco morto:** todo prédio tem uma Passiva de Produção até o m25 (a de
   Clique não rende offline, então não pode ser a única recompensa cedo de um prédio).
-- **Personalidade de prédio:** Miaurcado puxa idle, Banco puxa clique — a escolha de *onde* investir
+- **Personalidade de prédio:** Miaurcado puxa idle, Píer puxa clique — a escolha de *onde* investir
   vira parte do build.
 
 ### 3.5 Clique e Habilidades ativas — o eixo *clicker*
@@ -247,6 +249,11 @@ Empurrão **pequeno e único** por Era — alvo: **~30 s da produção passiva n
 (com um piso pra não ser irrelevante cedo). **Nunca** um multiplicador permanente: isso viraria um
 2º eixo de prestígio dentro da run e distorceria §4 e §8. Calibrar contra os alvos de ritmo (§8).
 
+> **⚠️ Revisto no jogo completo (§4.6, v0.5):** no *slice* a Era dá **lump** (acima). Na visão do
+> **jogo completo**, cruzar Era dá **multiplicador global temporário** (perdido na Dinastia), porque
+> num economia empilhada o lump aditivo vira pó. O lump fica valendo só enquanto o slice não tem o
+> modelo empilhado. Ver §4.6.
+
 ### Notas de implementação
 
 - **Era atual = função pura de `lifetime`** (vive em `domain/`, testável). Sem novo recurso.
@@ -254,6 +261,109 @@ Empurrão **pequeno e único** por Era — alvo: **~30 s da produção passiva n
   o **cruzamento ao vivo**, não a hidratação.
 - Casa com a **evolução visual** (§10): as Eras marcadas disparam os estágios do Beco (com os marcos, §3.4).
 - Reset na **Nova Dinastia** (§6): `eraMaisAlta` volta a 1.
+
+---
+
+## 4.6 Arquitetura de progressão do jogo completo (pós-slice) `[decisão v0.5]`
+
+O slice tem 4 prédios; o **jogo completo** cresce muito além disso. Esta seção trava a **arquitetura
+de longevidade** — decidida numa sessão de grelha (2026-07-15). Onde ela **revê** uma decisão travada
+do slice, está marcado. O slice não precisa implementar isto ainda; é o mapa do que vem depois.
+
+**Objetivo do jogador = espetáculo, não puzzle de otimização.** Assistir um império de gatos crescer
+da caixa de papelão ao intergalático. Toda decisão abaixo serve a isso.
+
+### 4.6.1 Prédios ≠ Eras (a separação-mãe)
+- **Prédio** = *onde o gato trabalha* (unidade de trabalho; você compra N gatos dentro). É `data/`.
+- **Era** = *o avanço civilizacional* (a escada de escala caixa→galáxia, §4.5).
+- Os dois eixos **não** contam a mesma história. Nomes como "nação", "império intergalático" são
+  **Eras**, não prédios. Prédios vivem **dentro** de uma Era.
+
+### 4.6.2 Modelo empilhado (A) — nada some durante a run
+- Ao desbloquear prédios novos, os antigos **continuam na tela, produzindo** (a Caixa de Papelão
+  cospe migalha até a Era Galáctica). **Todas as lanes visíveis** — o apelo é visual/acúmulo.
+- Consequência de UI: com dezenas de lanes, elas colapsam/rolam (detalhe pra depois), mas **existem**.
+- É o modelo Cookie Clicker / AdVenture Capitalist. "Nada some" vale **na run** — a **Dinastia**
+  (§4.6.5) reseta tudo, e isso é outro escopo.
+
+### 4.6.3 Fórmula global de curva
+- Como tudo produz ao mesmo tempo pra sempre, a produção total é a **soma de exponenciais**. Os
+  números de cada prédio (custo/gato, produção/gato, limiar) **saem de uma fórmula** função da
+  posição na escada — **não** do feeling caso a caso.
+- "Desenhar aos poucos" vale pra **quais prédios existem e a arte deles**, **nunca** pros números.
+  Fixar a **forma da curva** é pré-requisito antes de ~5 prédios; senão cada prédio novo re-tuna
+  todos os anteriores.
+- Serve os alvos "início mais rápido, fim mais duro": é **tuning da curva + multiplicadores de Era**,
+  não da contagem de prédios.
+
+### 4.6.4 Decoração-fundo + arquétipos (o antídoto ao enchimento)
+- Prédio é **único na arte, no flavor e no papel**; mecanicamente é **clone escalado** (a matemática
+  sai da fórmula). Isso é honesto e barato, e casa com o espetáculo. Enchimento se combate com
+  **arte + pacing + papel legível**, não com mecânica única por prédio (isso seria puzzle de
+  otimização — rejeitado — e estrangularia a produção de conteúdo).
+- **Arquétipos (~4-5 papéis)** dão variedade *percebida* sem custo por-prédio. Cada prédio recebe
+  **um papel**; o papel decide qual efeito-molde ele usa (fórmula global intacta):
+  - **Produtor** (foco idle) · **Clicker** (foco clique) · **Sinérgico** (buffa vizinhos / a Era) ·
+    **Conversor** (mexe recurso, ex.: colheita por clique).
+  - É o instinto que o slice já teve ("Miaurcado puxa idle, Píer puxa clique", §3.4).
+
+### 4.6.5 Era = multiplicador global temporário + fundo bespoke `[revê o lump do §4.5]`
+- No jogo completo, cruzar Era dá: **multiplicador global** (temporário, **perdido** na Dinastia) +
+  **novo fundo de mundo** (ver visual abaixo) + **desbloqueia as próximas lanes** + **destrava faixas
+  do pool de Lendários** (§4.6.7) + escala o **Legado** ganho.
+- **Pacing vira serrote** (não rampa lisa): cada Era = *explode e avança rápido → bate no muro →
+  grinda → próxima Era*, com amplitude crescente. É o ritmo desejado.
+- Revê o §4.5: o **lump** aditivo é pó numa economia exponencial-empilhada; por isso vira
+  **multiplicador**. (No slice sem empilhamento, o lump ainda serve.)
+
+**Modelo visual da Era `[decidido 2026-07-15, validado no app]`:**
+- **Mundo de fundo FIXO.** O cenário da Era é uma imagem que preenche a viewport, **fixa** atrás de
+  tudo (`.skybg`, `position: fixed`). A página rola normal (scroll único, natural); o mundo fica
+  parado. Os cartões de UI (HUD, botões, passivas, o peixe) **flutuam por cima** como chrome claro —
+  é "mundo escuro do beco + UI clara", **não** um app claro com um cartão escuro no meio (essa versão
+  foi testada e **rejeitada** por destoar). Primeiro asset entregue: `sky_beco.png` (Era 1).
+- **Uma imagem bespoke e detalhada POR ERA.** Cruzar uma Era **troca o mundo inteiro** — esse é o
+  espetáculo. Sem estágios parciais, sem faixa separada. Custo de arte: **1 fundo detalhado por Era**
+  (mais que "1 por distrito", mas o usuário priorizou espetáculo sobre economia de arte, e tem fôlego).
+- **Props ABANDONADOS.** A ideia de props que acumulavam por Era (overlays na moldura/faixa) foi
+  **prototipada no app e descartada** — a troca do fundo inteiro por Era já carrega o espetáculo, e
+  uma faixa de props comia tela (pior no mobile) sem ganhar o suficiente.
+- **Sob o modelo X (scroll único, §4.6.2):** o mundo mostra a Era **de pico** atual. Não se "volta"
+  pra rever o céu do Beco durante o jogo (isso era do modelo paginado, descartado); o espetáculo é
+  *tudo sob o teu mundo mais grandioso*. Reseta ao Beco na Dinastia.
+- **Pendência de código** (quando houver Era-detection no `domain/`): mapear Era → imagem e trocar
+  o `--sky` do `.skybg`. Hoje está fixo em `sky_beco.png`.
+
+### 4.6.6 Dinastia = reset-com-recompensa (o endgame) `[estende §6]`
+- É o prestígio (Nova Dinastia, §6) na sua forma completa: **progressão-replay**, não
+  variedade-replay. Cada run é **a mesma subida, mais rápida e mais longe** (modelo Clicker Heroes /
+  Tap Titans). Runs **não** divergem — o jogador não quer variedade de *run*, quer variedade de
+  *elenco* (§4.6.7).
+- Ascender reseta a run (volta à Caixa, Era 1) e concede **Legado** (moeda meta, escala pela **Era
+  mais alta** atingida — o `eraMaisAlta` que o §4.5 já persiste).
+
+### 4.6.7 Gatos Lendários = a coleção meta (a forma concreta dos "Artefatos" do §6/§13)
+- **O que são:** gatos **com nome, rosto e arte única** (o oposto do trabalhador anônimo). **Não
+  quebram** a ficção anônima — **dependem** dela: o enxame sem rosto é o que faz o Lendário saltar.
+- **Elenco grande** (muito mais que o nº de Eras — a variedade que o jogador quer é de **elenco**).
+- **Coleção convergente:** todo mundo junta todos no fim; o que muda entre jogadores é só a
+  **ordem/ritmo** de aquisição → é elenco, **não** divergência de run.
+- **Aquisição:** gasta **Legado** → **sorteio** de um Lendário do pool → **reroll** muda a oferta →
+  **upgrade** com mais Legado. As **Eras destravam faixas do pool** (Lendários "galácticos" só saem
+  depois de tocar a Era Galáctica).
+- **Função:** cada Lendário = um **perk global permanente**, de **papel variado** (idle, clique,
+  corte de custo, ganho offline, adianta-Era…). "Único" = **papel diferente**, não número diferente.
+- **Concretiza** os "Artefatos (§13)" que o §6 já prometia como o endgame das Coroas.
+- **Custo consciente:** o endgame ganha uma **camadinha de otimização** (qual puxar, qual upgradar).
+  Aceito **de olho aberto** — é otimização **por cima** do espetáculo, só no endgame, não no corpo.
+
+### 4.6.8 Pendências travadas pra sessão dedicada (Gatos Lendários)
+Não resolver de improviso — merecem grelha própria:
+- Tamanho do elenco · lista de perks e seus papéis · tiers do pool por Era.
+- Custo de reroll · curva de upgrade · piso pra o reroll não virar o puzzle que foi rejeitado.
+- **Moeda:** o §6 diz que Coroas "não são gastas" (contagem, bônus passivo). Os Lendários são
+  **comprados** (gasto). Reconciliar: Coroas viram gastáveis? Legado é derivado das Coroas? Decidir
+  na sessão dedicada.
 
 ---
 
@@ -287,6 +397,12 @@ coroas_ganhas = floor( sqrt( peixes_lifetime_da_run / PRESTIGE_DIVISOR ) )
 
 As **Coroas persistem como contagem** (não são "gastas") — dão bônus passivo hoje e, no endgame,
 serão também a moeda dos **Artefatos** (§13). Não modele coroa como recurso consumível.
+
+> **Endgame do jogo completo (§4.6.6–4.6.7, v0.5):** os "Artefatos" ganharam forma — são os **Gatos
+> Lendários**, uma coleção convergente comprada com a moeda de prestígio (via sorteio + reroll +
+> upgrade). A Dinastia é **progressão-replay** (a mesma subida, mais rápida). **Pendência:** os
+> Lendários são *gastáveis*, mas aqui a Coroa é *contagem* — reconciliar a moeda na sessão dedicada
+> (§4.6.8).
 
 O botão só aparece quando `coroas_ganhas >= 1`. A tela de confirmação **obrigatoriamente** mostra:
 o que se perde, o que se mantém, quantas coroas entram e o novo multiplicador.
@@ -429,8 +545,10 @@ Maré Alta (disparar uma Habilidade ativa durante o Festival) · Bigode Supremo 
 
 ## 13. Backlog pós-slice
 
-**Artefatos** — árvore de meta-progressão de endgame comprada com Coroas Felinas, no espírito dos
-*Ancients* do Clicker Heroes (é o lar dos "gatos nomeados" e itens colecionáveis). ·
+**Artefatos → Gatos Lendários** — a meta-progressão de endgame ganhou forma na **§4.6.7 (v0.5)**:
+os "gatos nomeados" **são** os Artefatos — coleção convergente de Lendários comprada com a moeda de
+prestígio via sorteio + reroll + upgrade. Detalhes (elenco, perks, tiers, moeda) travados pra
+**sessão de grelha dedicada** (§4.6.8). ·
 Miadópolis e demais distritos (são os **grandes saltos da escada de Eras**, §4.5 — o trecho fora do Beco) ·
 Ronrons e Influência (só se virarem decisão, não número) ·
 raridades · árvore de legado · mais eventos e habilidades ativas · som ·
@@ -448,3 +566,5 @@ animações de trabalho e celebração · migração para Phaser/Canvas se as la
 | 2026-07-13 | **v0.2 — reestruturação do modelo** | Grelha: prédios fixos + gatos como unidade comprável; híbrido idle+clicker (ADR-0001); sistema único de Habilidades (passiva/ativa) funde upgrades e marcos; decisão real vira build ativa-vs-idle; artefatos → endgame; layout de lanes estilo Cookie Clicker; §8 revisado |
 | 2026-07-14 | **v0.3 — + §4.5 Eras do Império** | Grelha: sensação de avanço civilizacional sem economia nova. Grau nomeado por run, dirigido pelo `lifetime`; cruzar Era dá título + lump de peixes + fanfarra e (em Eras marcadas) o estágio visual do Beco. Escada desenhada até o interplanetário, **unificando os distritos do §13**; slice constrói só as ~6 Eras do Beco (granulares > 4 prédios, pra beats entre desbloqueios). Entra no §2 (Dentro) e no §10 (passo 5) |
 | 2026-07-14 | **v0.4 — Passivas de Clique (ADR-0002)** | Grelha: passivas de prédio deixam de ser idle-only e ganham 2 sabores (Produção / Clique) que competem pelos mesmos peixes; 4 arquétipos no slice (P1 mult prédio, P2 escala com enxame, C1 mult clique, C2 colheita de %prod), P3/C3 no backlog. Clique = %(produção) via `CLICK_FACTOR_efetivo × mult_clique`, nunca fixo; passiva de clique é invisível offline. Reescreve §3.4/§3.5, redefine "Habilidade passiva" no CONTEXT (Passiva de Produção / de Clique) |
+| 2026-07-15 | **v0.5 — + §4.6 Arquitetura de progressão do jogo completo** | Grelha: como escalar dos 4 prédios-piloto pra um jogo longevo. **Prédios ≠ Eras** (prédio = trabalho; Era = escala). Modelo **empilhado (A)** (nada some na run, todas as lanes visíveis). **Fórmula global de curva** (números por função, não feeling). **Decoração-fundo + arquétipos** (~4-5 papéis; espetáculo, não puzzle). **Era vira multiplicador global temporário** (revê o lump do §4.5 no jogo completo; pacing serrote). **Dinastia = reset-com-recompensa** (progressão-replay). **Gatos Lendários** concretizam os Artefatos do §6/§13 (coleção convergente, sorteio+reroll+upgrade, perk permanente por papel, Eras destravam tiers do pool). Detalhes dos Lendários → sessão dedicada (§4.6.8). Notas de reference no §4.5, §6, §13 |
+| 2026-07-15 | **Modelo visual da Era (§4.6.5) — mundo fixo + fundo bespoke por Era** | Testado no app real: **mundo escuro fixo** (`sky_beco.png` na viewport, `.skybg` fixed) com UI clara flutuando por cima; scroll único natural. Versão "app claro + moldura escura com scroll aninhado" foi **rejeitada** (destoava + scroll estranho). **Props abandonados** (prototipados e descartados — comiam tela, pior no mobile). Cada Era passa a ter **1 fundo detalhado bespoke** que troca o mundo inteiro ao cruzar. Código: `App.tsx` + `styles.css` (`.skybg`); pendente Era→imagem quando houver Era-detection |

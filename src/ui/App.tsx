@@ -17,6 +17,7 @@ import { artOf } from "./buildingArt";
 import { DevPanel } from "./DevPanel";
 import fishImg from "../assets/fish_click.png";
 import coinImg from "../assets/fish_coin.png";
+import skyBeco from "../assets/sky_beco.png";
 
 /** Teto de gatos desenhados por lane. O enxame não cresce além disso; vira "+N". */
 const MAX_SHOWN = 36;
@@ -138,7 +139,8 @@ export function App() {
   }
 
   return (
-    <div className="app">
+    <div className="app" style={{ ["--sky" as string]: `url(${skyBeco})` }}>
+      <div className="skybg" aria-hidden="true" />
       {ganhoOffline && (
         <div className="modal-backdrop" role="presentation" onClick={fecharModalOffline}>
           <div
@@ -345,8 +347,8 @@ export function App() {
       </main>
 
       <footer className="foot">
-        Teste de arte + UI (claro imperial). Prédios sem asset próprio (banco) reusam a Caixa por
-        ora. Enxame denso, teto de {MAX_SHOWN} gatos por lane.
+        Teste de arte + UI (claro imperial). O Píer usa a lane e o gato próprios; ícone é
+        placeholder até gerar o PNG. Enxame denso, teto de {MAX_SHOWN} gatos por lane.
       </footer>
 
       {import.meta.env.DEV && <DevPanel />}

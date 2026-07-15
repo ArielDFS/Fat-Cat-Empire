@@ -120,6 +120,14 @@ button:focus-visible { outline: 3px solid var(--turq-esc); outline-offset: 2px; 
 
 /* ---------- Lanes ---------- */
 .lanes { flex: 1; min-width: 0; }
+
+/* Mundo do Beco (§4.6.5): o céu do distrito é um backdrop FIXO na viewport, atrás de tudo.
+   A página rola normalmente e o céu fica parado (scroll único, natural). Sobre esse mundo escuro,
+   os cartões de pergaminho (HUD, botões, passivas) flutuam como chrome de UI. */
+.skybg {
+  position: fixed; inset: 0; z-index: -1;
+  background: var(--beco-s) var(--sky, none) center top / cover no-repeat;
+}
 .qtybar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .qtybar-lab { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); font-weight: 700; }
 .seg { display: inline-flex; border: 2px solid var(--ink); border-radius: 12px; overflow: hidden; box-shadow: 0 2px 0 var(--papel-3); }
@@ -312,3 +320,13 @@ button:focus-visible { outline: 3px solid var(--turq-esc); outline-offset: 2px; 
   .pop { animation-name: popFade; }
   .bigfish img, .buy { transition: none; }
 }
+
+/* ---------- Textos claros sobre o mundo escuro do Beco (§4.6.5) ----------
+   Estes elementos ficam FORA de cartão (soltos sobre o céu), então precisam de cor clara.
+   Ficam no fim do arquivo de propósito, pra vencer as definições escuras originais. */
+.qtybar-lab { color: var(--creme); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85); }
+.totalrate strong { color: #fff; text-shadow: 0 2px 5px rgba(0, 0, 0, 0.55); }
+.totalrate span { color: var(--creme); }
+.clickhint { color: var(--creme); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+.clickhint b { color: var(--laranja); }
+.foot { color: rgba(255, 236, 200, 0.82); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }

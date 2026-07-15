@@ -43,16 +43,14 @@ Regra de ouro: `src/domain/` é economia **pura** (sem React/estado), 100% test�
 
 ## Pipeline de arte
 
-Assets vêm de IA e passam pelo [`normalize_asset.py`](normalize_asset.py). São **dois tracks**
-(detalhe em [`ART_STYLE.md`](ART_STYLE.md)):
+Assets vêm de IA e são **tratados à mão** (recorte, resize, âncora) e salvos em `src/assets/` — o
+antigo `normalize_asset.py` foi aposentado (v0.5). São **dois tracks** (detalhe em
+[`ART_STYLE.md`](ART_STYLE.md)):
 
-- **Mundo/UI** (chapado) — quantizado pra paleta travada: `--kind building | lanebg | icon | vfx`.
-- **Personagens** (detalhado) — **sem** quantizar: `--kind charcat` (gatos) · `--kind lanehd` (fundos de lane).
+- **Mundo/UI** (chapado) — paleta travada como **guia de geração** (sem quantização automática).
+- **Personagens/prédios/lanes** (detalhado) — cor livre; coesão pelo contorno `#241C2E` + style block.
 
-```bash
-python normalize_asset.py raw/cat_pescador.png --out src/assets/ --kind charcat
-```
-
+O mapeamento `Building.id → {icone, lane, gato}` vive em [`src/ui/buildingArt.ts`](src/ui/buildingArt.ts).
 O lockup da marca (mascote + wordmark) sai pronto via [`export_logo.py`](export_logo.py).
 
 ---

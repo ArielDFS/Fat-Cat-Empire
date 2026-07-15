@@ -36,7 +36,7 @@ _Avoid_: negócio, empresa, estação, slot.
 **Gato**:
 O **trabalhador anônimo** de um Prédio — a unidade que o jogador compra em **quantidade** e que
 gera Peixes. Não tem identidade individual; sua identidade é o **tipo**, dado pelo Prédio que o
-hospeda (gato pescador, gato banqueiro…).
+hospeda (gato de rua, gato peixeiro, gato pescador…).
 _Avoid_: unidade, worker, funcionário, personagem, cópia.
 
 **Tipo de gato**:

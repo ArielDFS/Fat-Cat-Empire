@@ -11,10 +11,13 @@ import laneCardbox from "../assets/lane_cardbox.png";
 import catRua from "../assets/cat_rua.png";
 import fishingBarrack from "../assets/fishing_barrack.png";
 import laneFishingBarrack from "../assets/lane_fishing_barrack.png";
-import catFisher from "../assets/cat_fisher.png";
+import catFishSeller from "../assets/cat_fish_seller.png";
 import market from "../assets/market.png";
 import laneMarket from "../assets/lane_market.png";
 import catFeirante from "../assets/cat_feirante.png";
+import pier from "../assets/pier.png";
+import laneFishingPier from "../assets/lane_fishing_pier.png";
+import catFisher from "../assets/cat_fisher.png";
 
 export interface BuildingArt {
   /** Ícone do prédio (lado esquerdo da lane). */
@@ -27,11 +30,12 @@ export interface BuildingArt {
 
 const ART: Record<string, BuildingArt> = {
   caixa_papelao: { icone: cardbox, lane: laneCardbox, gato: catRua },
-  barraca_peixe: { icone: fishingBarrack, lane: laneFishingBarrack, gato: catFisher },
+  barraca_peixe: { icone: fishingBarrack, lane: laneFishingBarrack, gato: catFishSeller },
   miaurcado: { icone: market, lane: laneMarket, gato: catFeirante },
+  pier_pesca: { icone: pier, lane: laneFishingPier, gato: catFisher },
 };
 
-/** Prédios sem arte própria (banco) reusam a Caixa até termos os PNGs. */
+/** Prédios sem arte própria reusam a Caixa até termos os PNGs. */
 const FALLBACK: BuildingArt = { icone: cardbox, lane: laneCardbox, gato: catRua };
 
 export function artOf(buildingId: string): BuildingArt {

@@ -7,7 +7,7 @@
  * ao contrário das constantes `[TRAVADO]` de §3.1.
  */
 
-export type TipoGato = "rua" | "pescador" | "feirante" | "banqueiro";
+export type TipoGato = "rua" | "peixeiro" | "feirante" | "pescador";
 
 export interface Building {
   /** Casa com o nome dos assets (ex.: bld_caixa_n1.png, cat_rua.png). */
@@ -40,7 +40,7 @@ export const BUILDINGS: readonly Building[] = [
     id: "barraca_peixe",
     nome: "Barraca de Peixe",
     descricao: "Onde os gatos descobriram que peixe também vem de fora do lixo.",
-    tipoGato: "pescador",
+    tipoGato: "peixeiro",
     custoBasePorGato: 100,
     producaoPorGato: 1,
     desbloqueio: 250,
@@ -57,10 +57,10 @@ export const BUILDINGS: readonly Building[] = [
     marcos: [10, 25, 50, 100],
   },
   {
-    id: "banco_atum",
-    nome: "Banco do Atum",
-    descricao: "Guardam atum em cofres. Ninguém sabe por quê, mas rende.",
-    tipoGato: "banqueiro",
+    id: "pier_pesca",
+    nome: "Píer de Pesca",
+    descricao: "O beco chegou ao mar: gatos fisgando atum direto da fonte.",
+    tipoGato: "pescador",
     custoBasePorGato: 12_000,
     producaoPorGato: 47,
     desbloqueio: 120_000,

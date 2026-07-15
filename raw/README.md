@@ -1,10 +1,9 @@
 # raw/ — assets brutos gerados pela IA
 
-Aqui vão os PNGs (ou JPGs) **direto da IA**, antes de normalizar.
-O `normalize_asset.py` lê desta pasta e escreve os finais em `src/assets/`.
+Aqui vão os PNGs (ou JPGs) **direto da IA**, antes do tratamento.
 
-Nomes esperados agora:
-- `cat_base_idle.png` — o gato-base creme (referência de DNA, ART_STYLE §6)
-- `cat_rua.png` — o gato de rua cinza com trapos
+Desde v0.5 o tratamento (recorte, apara de alpha, âncora, resize) é **à mão** — o antigo
+`normalize_asset.py` foi aposentado. Salve o PNG já pronto em `src/assets/` e ligue-o no
+mapeamento em [`../src/ui/buildingArt.ts`](../src/ui/buildingArt.ts).
 
-Uso: `python normalize_asset.py raw/cat_rua.png --out src/assets/ --kind cat`
+Prompts e regras de estilo: [`../ART_STYLE.md`](../ART_STYLE.md) (§5.x para os STYLE BLOCKs).

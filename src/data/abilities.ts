@@ -89,11 +89,11 @@ const DEFS: Record<string, readonly Def[]> = {
     { nome: "Grito do Feirante", descricao: "'Óia a promoção!' — o clique ganha voz.", emoji: "📣", efeito: { tipo: "cliqueMult", fator: 1.5 } },
     { nome: "Rede de Bancas", descricao: "Uma banca em cada esquina do beco. Dobrou.", emoji: "🏬", efeito: { tipo: "producaoMult", fator: 2 } },
   ],
-  banco_atum: [
-    { nome: "Bônus por Clique", descricao: "Todo clique vira comissão.", emoji: "💳", efeito: { tipo: "cliqueMult", fator: 1.5 } },
-    { nome: "Gerente Sonolento", descricao: "Dorme no cofre e ainda rende o dobro.", emoji: "😴", efeito: { tipo: "producaoMult", fator: 2 } },
-    { nome: "Juros Compostos", descricao: "Cada clique rende um tiquinho de tudo.", emoji: "📈", efeito: { tipo: "cliqueColheita", pct: 0.03 } },
-    { nome: "Alta do Atum", descricao: "Mercado em alta: o clique dispara.", emoji: "🐟", efeito: { tipo: "cliqueMult", fator: 2 } },
+  pier_pesca: [
+    { nome: "Anzol de Prata", descricao: "Fisga premium: cada clique rende mais.", emoji: "🎣", efeito: { tipo: "cliqueMult", fator: 1.5 } },
+    { nome: "Cardume Fiel", descricao: "O atum volta sozinho pro píer. Dobrou.", emoji: "🐟", efeito: { tipo: "producaoMult", fator: 2 } },
+    { nome: "Maré de Sorte", descricao: "Cada clique arrasta um tiquinho de tudo.", emoji: "🌊", efeito: { tipo: "cliqueColheita", pct: 0.03 } },
+    { nome: "Atum Gigante", descricao: "A fisgada do dia dispara o clique.", emoji: "🐋", efeito: { tipo: "cliqueMult", fator: 2 } },
   ],
 };
 
