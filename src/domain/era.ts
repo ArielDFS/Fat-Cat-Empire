@@ -1,27 +1,24 @@
 /**
- * Eras do Império — o eixo civilizacional. Economia PURA (GAME_DESIGN.md §4.5).
+ * Eras do Império — o eixo civilizacional. Economia PURA (GAME_DESIGN.md §4.5 / §4.6.9).
  *
  * Não importa nada de `ui/`, `state/` nem `data/` (a regra de ouro de `production.ts`). O *conteúdo*
- * das Eras (nomes, limiares, constantes de lump) mora em `data/eras.ts`; aqui fica só a matemática
- * testável: qual Era um `lifetime` representa e quanto vale o lump ao cruzar uma.
+ * das Eras (nomes, escalas, constantes de lump) mora em `data/eras.ts`; aqui fica só a matemática
+ * testável: qual Era um número de Obras construídas representa, e quanto vale o lump ao cruzar uma.
  *
- * A Era é **derivada do `lifetime`** (§4.5) — nenhum recurso novo. O único estado que a store
- * persiste é a Era mais alta já atingida (um inteiro), para não repagar o lump ao recarregar.
+ * **Migração v0.6 (ADR-0003):** a Era deixou de ser função do `lifetime` e passou a ser dirigida
+ * por **atos concretos** — cada **Obra** construída (o prédio-virada da Era) sobe um degrau. A
+ * contagem de Obras vive em `gatos` (estado persistido); aqui só se converte contagem → nível.
  */
 
 /**
- * Nível da Era correspondente a um `lifetime` de peixes (§4.5). `limiares` em ordem crescente,
- * começando em 0 (Era 1 é o início). Retorna 1..N; nunca abaixo de 1, mesmo com entrada inválida
- * (relógio/save corrompido) — a run sempre está em pelo menos a Era 1.
+ * Nível da Era a partir do número de **Obras já construídas** na run (§4.6.9). Zero Obras = Era 1
+ * (o início do Beco); cada Obra construída sobe um degrau. Nunca abaixo de 1, mesmo com entrada
+ * inválida (save corrompido) — a run sempre está em pelo menos a Era 1. Pode retornar acima do total
+ * de Eras do slice (construir a Obra da última Era "aponta" para uma Era ainda inexistente — o
+ * chamador clampa via `eraPorNivel`).
  */
-export function nivelDaEra(lifetime: number, limiares: readonly number[]): number {
-  let nivel = 1;
-  for (let i = 1; i < limiares.length; i++) {
-    const limiar = limiares[i];
-    if (limiar !== undefined && lifetime >= limiar) nivel = i + 1;
-    else break; // limiares crescentes: o primeiro não-atingido corta o resto
-  }
-  return nivel;
+export function eraDeObras(obrasConstruidas: number): number {
+  return Math.max(1, Math.floor(obrasConstruidas) + 1);
 }
 
 /**

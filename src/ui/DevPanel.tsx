@@ -9,9 +9,9 @@
 
 import { useState } from "react";
 import type { CSSProperties } from "react";
-import { useGame, aplicarGanhoLifetime } from "../state/store";
+import { useGame, eraAtual } from "../state/store";
 import { BUILDINGS } from "../data/buildings";
-import { LIMIARES, eraPorNivel } from "../data/eras";
+import { eraPorNivel } from "../data/eras";
 import { PRESTIGE_DIVISOR } from "../domain/constants";
 import { limparSave } from "../state/save";
 
@@ -29,10 +29,6 @@ function gatosZerados(): Record<string, number> {
   return Object.fromEntries(BUILDINGS.map((b) => [b.id, 0]));
 }
 
-function maiorDesbloqueio(): number {
-  return Math.max(...BUILDINGS.map((b) => b.desbloqueio));
-}
-
 // --- ações de teste (via setState direto) ---
 
 function addPeixes(n: number) {
@@ -45,39 +41,50 @@ function addCoroas(n: number) {
   useGame.setState((s) => ({ coroas: s.coroas + n }));
 }
 
-/** Revela os 4 prédios sem inflar o enxame (bom pra testar visual de lane vazia). */
+/**
+ * Revela todos os prédios com o enxame mínimo (1 gato cada). Na cadeia de compra (§4.6.9) não dá pra
+ * revelar um prédio sem ter o 1º gato do anterior — então isto também constrói todas as Obras
+ * (a Era derivada salta pra última). Direto no estado, sem fanfarra.
+ */
 function revelarPredios() {
-  useGame.setState((s) => ({ lifetime: Math.max(s.lifetime, maiorDesbloqueio()) }));
+  useGame.setState((s) => {
+    const gatos = { ...s.gatos };
+    for (const b of BUILDINGS) gatos[b.id] = Math.max(gatos[b.id] ?? 0, 1);
+    return { gatos };
+  });
 }
 
-/** Desbloqueia tudo: revela os prédios E enche cada um até o topo de marcos (abre todas as passivas). */
+/** Desbloqueia tudo: enche cada prédio até o topo de marcos (revela a cadeia + abre todas as passivas). */
 function desbloquearTudo() {
   useGame.setState((s) => {
     const gatos = { ...s.gatos };
     for (const b of BUILDINGS) gatos[b.id] = Math.max(gatos[b.id] ?? 0, MARCO_MAX);
-    return { lifetime: Math.max(s.lifetime, maiorDesbloqueio()), gatos };
+    return { gatos };
   });
 }
 
 /**
- * Cruza a próxima Era AO VIVO (§4.5): empurra o lifetime logo além do próximo limiar pelo mesmo
- * caminho do jogo (`aplicarGanhoLifetime`) — paga o lump e dispara a fanfarra de verdade.
+ * Constrói a próxima Obra ainda não erguida (§4.6.9), passando pelo caminho REAL do jogo
+ * (`comprarGatos`) — satisfaz a cadeia, financia o 1º gato da Obra, e dispara fanfarra + lump.
  */
 function cruzarProximaEra() {
-  useGame.setState((s) => {
-    const prox = LIMIARES.find((l) => l > s.lifetime);
-    if (prox === undefined) return {}; // já na última Era do slice
-    return aplicarGanhoLifetime(s, prox - s.lifetime + 1);
-  });
+  const s = useGame.getState();
+  const obra = BUILDINGS.find((b) => b.ehObra && (s.gatos[b.id] ?? 0) === 0);
+  if (!obra) return; // todas as Obras já construídas
+  const idx = BUILDINGS.findIndex((b) => b.id === obra.id);
+  const gatos = { ...s.gatos };
+  for (let i = 0; i < idx; i++) gatos[BUILDINGS[i]!.id] = Math.max(gatos[BUILDINGS[i]!.id] ?? 0, 1);
+  useGame.setState({ gatos, peixes: s.peixes + obra.custoBasePorGato });
+  useGame.getState().comprarGatos(obra.id, 1);
 }
 
 /**
- * Empurra o `lifetime` até já valer N coroas (§6) — testa o botão de Nova Dinastia sem jogar 1h.
- * Inverte `floor(sqrt(lifetime/DIV))`: lifetime = N² × DIV.
+ * Empurra os `gastos` até já valerem N coroas (§6) — testa o botão de Nova Dinastia sem jogar 1h.
+ * Inverte `floor(sqrt(gastos/DIV))`: gastos = N² × DIV.
  */
-function darLifetimeParaCoroas(n: number) {
+function darGastosParaCoroas(n: number) {
   const alvo = n * n * PRESTIGE_DIVISOR;
-  useGame.setState((s) => ({ lifetime: Math.max(s.lifetime, alvo) }));
+  useGame.setState((s) => ({ gastos: Math.max(s.gastos, alvo) }));
 }
 
 /** Zera a run (inclui o save) — testa progressão do zero. */
@@ -86,10 +93,10 @@ function zerarRun() {
   useGame.setState({
     peixes: 0,
     lifetime: 0,
+    gastos: 0,
     coroas: 0,
     gatos: gatosZerados(),
     habilidades: [],
-    eraMaisAlta: 1,
     seloImperial: false,
     dinastias: 0,
     runInicioTs: Date.now(),
@@ -142,10 +149,12 @@ export function DevPanel() {
   const [valor, setValor] = useState("1000000");
   const peixes = useGame((s) => s.peixes);
   const lifetime = useGame((s) => s.lifetime);
+  const gastos = useGame((s) => s.gastos);
   const coroas = useGame((s) => s.coroas);
-  const eraMaisAlta = useGame((s) => s.eraMaisAlta);
+  const gatos = useGame((s) => s.gatos);
   const seloImperial = useGame((s) => s.seloImperial);
   const dinastias = useGame((s) => s.dinastias);
+  const eraNivel = eraAtual(gatos);
 
   if (!aberto) {
     return (
@@ -191,18 +200,18 @@ export function DevPanel() {
       <span style={S.label}>Desbloqueio</span>
       <button style={S.btnWide} onClick={desbloquearTudo}>Desbloquear tudo (prédios + passivas)</button>
       <button style={{ ...S.btnWide, background: "#FF7A2F" }} onClick={revelarPredios}>
-        Só revelar prédios
+        Só revelar prédios (1 gato cada)
       </button>
 
       <span style={S.label}>Eras</span>
       <button style={{ ...S.btnWide, background: "#C9B4FF" }} onClick={cruzarProximaEra}>
-        Cruzar próxima Era (ao vivo)
+        Construir próxima Obra (vira Era)
       </button>
 
       <span style={S.label}>Dinastia</span>
       <div style={S.row}>
-        <button style={S.btn} onClick={() => darLifetimeParaCoroas(1)}>lifetime → 1 👑</button>
-        <button style={S.btn} onClick={() => darLifetimeParaCoroas(5)}>→ 5 👑</button>
+        <button style={S.btn} onClick={() => darGastosParaCoroas(1)}>gastos → 1 👑</button>
+        <button style={S.btn} onClick={() => darGastosParaCoroas(5)}>→ 5 👑</button>
       </div>
 
       <span style={S.label}>Reset</span>
@@ -211,8 +220,9 @@ export function DevPanel() {
       <div style={S.stat}>
         🐟 {peixes.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
         {" · "}👑 {coroas}
-        <br />lifetime {lifetime.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
-        <br />Era {eraMaisAlta} — {eraPorNivel(eraMaisAlta).nome}
+        <br />gastos {gastos.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+        <br />lifetime {lifetime.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} (vitrine)
+        <br />Era {eraNivel} — {eraPorNivel(eraNivel).nome}
         {seloImperial ? " · 🏅 Selo" : ""}
         <br />Dinastias {dinastias}
       </div>

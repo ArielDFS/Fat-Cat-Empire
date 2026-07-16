@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useGame, prodPorSegundo, poderDeClique, habilidadesDoPredio } from "./store";
+import { useGame, prodPorSegundo, poderDeClique, habilidadesDoPredio, eraAtual } from "./store";
 import { abilityPorId } from "../data/abilities";
-import { LUMP_PISO } from "../data/eras";
+import { BUILDINGS } from "../data/buildings";
+import { LUMP_SEGUNDOS, LUMP_PISO } from "../data/eras";
+import { lumpDaEra } from "../domain/era";
 import { PRESTIGE_DIVISOR, SELO_IMPERIAL_MULT } from "../domain/constants";
 
 const CLIQUE10 = abilityPorId("caixa_papelao:m10")!; // C1 clique ×1,5, marco 10
@@ -12,10 +14,10 @@ function seed(patch: Partial<ReturnType<typeof useGame.getState>>) {
   useGame.setState({
     peixes: 0,
     lifetime: 0,
+    gastos: 0,
     coroas: 0,
     gatos: {},
     habilidades: [],
-    eraMaisAlta: 1,
     seloImperial: false,
     dinastias: 0,
     runInicioTs: Date.now(),
@@ -48,9 +50,9 @@ describe("comprarHabilidade (§3.4)", () => {
     expect(useGame.getState().habilidades).toHaveLength(0);
   });
 
-  it("não compra em prédio ainda bloqueado (lifetime < desbloqueio)", () => {
-    const barraca = abilityPorId("barraca_peixe:m10")!; // desbloqueia em 250 de lifetime
-    seed({ peixes: barraca.custo, lifetime: 0, gatos: { barraca_peixe: 10 } });
+  it("não compra em prédio ainda bloqueado pela cadeia (anterior sem gato)", () => {
+    const barraca = abilityPorId("barraca_peixe:m10")!; // Barraca só abre com ≥1 gato na Caixa
+    seed({ peixes: barraca.custo, gatos: { barraca_peixe: 10 } }); // Caixa em 0 → Barraca oculta
     useGame.getState().comprarHabilidade(barraca.id);
     expect(useGame.getState().habilidades).toHaveLength(0);
   });
@@ -83,63 +85,69 @@ describe("efeito das passivas na economia (ADR-0002)", () => {
   });
 });
 
-describe("cruzamento de Era ao vivo (§4.5)", () => {
-  it("clicar cruzando o limiar da Era 2 sobe a Era, paga o lump e arma a fanfarra", () => {
-    // Sem produção (0 gatos) o clique rende o piso de 1; leva o lifetime a 1 abaixo do limiar (1500).
-    seed({ lifetime: 1_499, peixes: 0 });
-    useGame.getState().clicar(); // +1 → lifetime 1500 (Era 2)
+describe("virada de Era ao construir a Obra (§4.6.9)", () => {
+  // Era-1 Obra = prefeitura_vira_lata; seu anterior na cadeia é latao_gourmet. Custo derivado do
+  // dado (robusto a mudanças de curva): 1º gato ⇒ custoBasePorGato.
+  const OBRA = "prefeitura_vira_lata";
+  const CUSTO_OBRA = BUILDINGS.find((b) => b.id === OBRA)!.custoBasePorGato;
+
+  it("comprar o 1º gato da Obra vira a Era, arma a fanfarra e paga o lump", () => {
+    // 1 gato no Latão desbloqueia a Obra e dá produção para o lump.
+    seed({ gatos: { latao_gourmet: 1 }, peixes: CUSTO_OBRA });
+    const rate = prodPorSegundo(useGame.getState()); // produção do Latão
+    useGame.getState().comprarGatos(OBRA, 1);
     const s = useGame.getState();
-    expect(s.eraMaisAlta).toBe(2);
+    expect(eraAtual(s.gatos)).toBe(2); // Beco → Vila
     expect(s.eraFanfarra?.nivel).toBe(2);
-    // Produção zero → o lump cai no piso. peixes = ganho do clique (1) + piso.
-    expect(s.peixes).toBe(1 + LUMP_PISO);
+    // peixes = (saldo − custo) + lump; saldo == custo, então sobra só o lump.
+    expect(s.peixes).toBeCloseTo(lumpDaEra(rate, LUMP_SEGUNDOS, LUMP_PISO));
+    expect(s.gastos).toBe(CUSTO_OBRA); // a Obra conta pro prestígio
   });
 
-  it("o lump entra só em peixes, não no lifetime (não encadeia a próxima Era de graça)", () => {
-    seed({ lifetime: 1_499, peixes: 0 });
-    useGame.getState().clicar();
-    // lifetime avança só pelo ganho genuíno (o +1 do clique), nunca pelo lump.
-    expect(useGame.getState().lifetime).toBe(1_500);
-    expect(useGame.getState().eraMaisAlta).toBe(2); // não pulou pra 3
+  it("o lump não mexe no lifetime (vitrine) — comprar gato não produz", () => {
+    seed({ gatos: { latao_gourmet: 1 }, peixes: CUSTO_OBRA, lifetime: 5_000 });
+    useGame.getState().comprarGatos(OBRA, 1);
+    expect(useGame.getState().lifetime).toBe(5_000); // intacto
   });
 
-  it("não repaga o lump ao ficar na mesma Era", () => {
-    seed({ lifetime: 1_600, eraMaisAlta: 2, peixes: 0 });
-    useGame.getState().clicar(); // continua na Era 2
+  it("comprar MAIS gatos de uma Obra já construída não vira Era nem repaga o lump", () => {
+    seed({ gatos: { latao_gourmet: 1, [OBRA]: 1 }, peixes: 10 * CUSTO_OBRA });
+    const eraAntes = eraAtual(useGame.getState().gatos); // já Era 2
+    useGame.getState().comprarGatos(OBRA, 1); // 2º gato da Obra
     const s = useGame.getState();
-    expect(s.eraMaisAlta).toBe(2);
+    expect(eraAtual(s.gatos)).toBe(eraAntes);
     expect(s.eraFanfarra).toBeNull();
-    expect(s.peixes).toBe(1); // só o ganho do clique, sem lump
-  });
-
-  it("um tick que salta vários limiares de uma vez sobe até a Era final e paga cada lump", () => {
-    // 8 gatos de rua (0,1/s cada) = 0,8/s. Um tick gigante empurra o lifetime além da Era 3 (8000).
-    seed({ lifetime: 0, gatos: { caixa_papelao: 8 } });
-    useGame.getState().tick(20_000); // 0,8 × 20000 = 16000 de peixes → cruza Eras 2 e 3
-    const s = useGame.getState();
-    expect(s.eraMaisAlta).toBe(3);
-    expect(s.eraFanfarra?.nivel).toBe(3);
   });
 
   it("fecharFanfarra limpa a fanfarra sem mexer na Era", () => {
-    seed({ lifetime: 1_499 });
-    useGame.getState().clicar();
+    seed({ gatos: { latao_gourmet: 1 }, peixes: CUSTO_OBRA });
+    useGame.getState().comprarGatos(OBRA, 1);
     expect(useGame.getState().eraFanfarra).not.toBeNull();
     useGame.getState().fecharFanfarra();
     expect(useGame.getState().eraFanfarra).toBeNull();
-    expect(useGame.getState().eraMaisAlta).toBe(2);
+    expect(eraAtual(useGame.getState().gatos)).toBe(2);
+  });
+
+  it("clicar e tickar NÃO viram Era (a Era só avança por Obra)", () => {
+    seed({ gatos: { caixa_papelao: 8 } });
+    useGame.getState().clicar();
+    useGame.getState().tick(100_000);
+    const s = useGame.getState();
+    expect(eraAtual(s.gatos)).toBe(1); // continua no Beco
+    expect(s.eraFanfarra).toBeNull();
+    expect(s.lifetime).toBeGreaterThan(0); // mas o lifetime-vitrine subiu
   });
 });
 
 describe("novaDinastia — prestígio (§6)", () => {
   it("funda com ≥1 coroa: credita coroas, concede o Selo e zera a run", () => {
     seed({
-      lifetime: 4 * PRESTIGE_DIVISOR, // sqrt(4) = 2 coroas
+      gastos: 4 * PRESTIGE_DIVISOR, // sqrt(4) = 2 coroas
       peixes: 9_999,
+      lifetime: 9_999,
       coroas: 1,
       gatos: { caixa_papelao: 50 },
       habilidades: [CLIQUE10.id],
-      eraMaisAlta: 3,
     });
     useGame.getState().novaDinastia();
     const s = useGame.getState();
@@ -147,24 +155,25 @@ describe("novaDinastia — prestígio (§6)", () => {
     expect(s.seloImperial).toBe(true);
     expect(s.peixes).toBe(0);
     expect(s.lifetime).toBe(0);
+    expect(s.gastos).toBe(0);
     expect(s.gatos.caixa_papelao).toBe(0);
     expect(s.habilidades).toEqual([]);
-    expect(s.eraMaisAlta).toBe(1); // volta ao Beco
+    expect(eraAtual(s.gatos)).toBe(1); // volta ao Beco (gatos zerados ⇒ 0 Obras)
     expect(s.dinastias).toBe(1); // contador de fundações incrementa
   });
 
   it("conta as Dinastias de forma cumulativa (não reseta)", () => {
-    seed({ lifetime: PRESTIGE_DIVISOR, coroas: 0, dinastias: 2 });
+    seed({ gastos: PRESTIGE_DIVISOR, coroas: 0, dinastias: 2 });
     useGame.getState().novaDinastia();
     expect(useGame.getState().dinastias).toBe(3);
   });
 
   it("não funda com menos de 1 coroa: nada muda", () => {
-    seed({ lifetime: PRESTIGE_DIVISOR - 1, coroas: 0, gatos: { caixa_papelao: 10 } });
+    seed({ gastos: PRESTIGE_DIVISOR - 1, coroas: 0, gatos: { caixa_papelao: 10 } });
     useGame.getState().novaDinastia();
     const s = useGame.getState();
     expect(s.coroas).toBe(0);
-    expect(s.lifetime).toBe(PRESTIGE_DIVISOR - 1);
+    expect(s.gastos).toBe(PRESTIGE_DIVISOR - 1);
     expect(s.gatos.caixa_papelao).toBe(10);
     expect(s.seloImperial).toBe(false);
   });
@@ -177,7 +186,7 @@ describe("novaDinastia — prestígio (§6)", () => {
   });
 
   it("o ×1,5 do Selo NÃO empilha entre Dinastias: fundar de novo só soma coroas", () => {
-    seed({ lifetime: PRESTIGE_DIVISOR, coroas: 0, seloImperial: true, gatos: { caixa_papelao: 10 } });
+    seed({ gastos: PRESTIGE_DIVISOR, coroas: 0, seloImperial: true, gatos: { caixa_papelao: 10 } });
     const antes = useGame.getState().seloImperial;
     useGame.getState().novaDinastia();
     const s = useGame.getState();
@@ -188,7 +197,7 @@ describe("novaDinastia — prestígio (§6)", () => {
 
   it("re-arma o relógio da run ao fundar (base da conquista §12)", () => {
     const antigo = Date.now() - 60_000;
-    seed({ lifetime: PRESTIGE_DIVISOR, runInicioTs: antigo });
+    seed({ gastos: PRESTIGE_DIVISOR, runInicioTs: antigo });
     useGame.getState().novaDinastia();
     expect(useGame.getState().runInicioTs).toBeGreaterThan(antigo);
   });

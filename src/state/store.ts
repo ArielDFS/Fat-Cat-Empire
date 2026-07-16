@@ -25,8 +25,8 @@ import { calcularGanhoOffline } from "../domain/offline";
 import type { GanhoOffline } from "../domain/offline";
 import { coroasGanhasNaRun } from "../domain/prestige";
 import { SELO_IMPERIAL_MULT } from "../domain/constants";
-import { nivelDaEra, lumpDaEra } from "../domain/era";
-import { LIMIARES, LUMP_SEGUNDOS, LUMP_PISO, eraPorNivel } from "../data/eras";
+import { eraDeObras, lumpDaEra } from "../domain/era";
+import { ERAS, LUMP_SEGUNDOS, LUMP_PISO, eraPorNivel } from "../data/eras";
 import type { Era } from "../data/eras";
 import { carregarSave, gravarSave } from "./save";
 
@@ -98,29 +98,14 @@ function efeitosCliqueGlobais(habilidades: readonly string[]): EfeitoClique[] {
 }
 
 /**
- * Aplica um ganho de peixes que TAMBÉM conta como `lifetime` (produção do tick ou clique) e
- * processa os cruzamentos de Era (§4.5). Devolve o patch para `set`.
+ * Credita um ganho de peixes da run (produção do tick ou clique). Move o `peixes` **e** o `lifetime`.
  *
- * O ganho move o `lifetime`; se ele cruzar um ou mais limiares de Era, cada Era nova paga um
- * **lump** (§4.5) — creditado só em peixes, **não** no lifetime, para o presente não empurrar a
- * run pra próxima Era de graça (o lifetime continua sendo produção genuína). A fanfarra mostra a
- * Era mais alta alcançada. Sem cruzamento, só credita peixes e lifetime.
- *
- * Reusado pelo tick, pelo clique e pelo painel dev — é o único caminho de "ganho ao vivo".
+ * **Migração v0.6:** o `lifetime` virou pura **estatística de vitrine** (§4.6.9 ponto 6) — não dirige
+ * mais Era nem prestígio. Por isso este caminho não tem mais nenhuma lógica de Era: a Era só avança
+ * ao **construir uma Obra** (ver `comprarGatos`), nunca por produção/clique (nem offline).
  */
-export function aplicarGanhoLifetime(s: GameState, ganho: number): Partial<GameState> {
-  const lifetime = s.lifetime + ganho;
-  const nivelNovo = nivelDaEra(lifetime, LIMIARES);
-  if (nivelNovo <= s.eraMaisAlta) {
-    return { peixes: s.peixes + ganho, lifetime };
-  }
-  // Cruzou uma ou mais Eras: paga o lump de cada (produção estável — não depende de peixes).
-  const rate = prodPorSegundo(s);
-  let peixes = s.peixes + ganho;
-  for (let n = s.eraMaisAlta + 1; n <= nivelNovo; n++) {
-    peixes += lumpDaEra(rate, LUMP_SEGUNDOS, LUMP_PISO);
-  }
-  return { peixes, lifetime, eraMaisAlta: nivelNovo, eraFanfarra: eraPorNivel(nivelNovo) };
+function creditarGanho(s: GameState, ganho: number): Partial<GameState> {
+  return { peixes: s.peixes + ganho, lifetime: s.lifetime + ganho };
 }
 
 /** Traduz o estado bruto para o formato que `domain/production` entende. */
@@ -137,13 +122,17 @@ function produtores(
 
 export interface GameState {
   peixes: number;
+  /** Peixes já produzidos na run. **Vitrine only (§4.6.9):** exibido, dirige zero mecânicas. */
   lifetime: number;
   coroas: number;
+  /**
+   * Peixes GASTOS na run (gatos + passivas + Obras) — a base do prestígio na v0.6 (§6, ADR-0003).
+   * `sqrt(gastos / DIVISOR)` = coroas. Zera na Nova Dinastia.
+   */
+  gastos: number;
   gatos: Record<string, number>;
   /** Ids das Habilidades passivas já compradas na run (§3.4). Reseta na Nova Dinastia. */
   habilidades: string[];
-  /** Era mais alta já atingida na run (§4.5). Persistida (inteiro) para não repagar o lump. */
-  eraMaisAlta: number;
   /** Selo Imperial concedido? (§3.6) Habilidade global — produção ×1,5, permanente, sobrevive à Dinastia. */
   seloImperial: boolean;
   /** Quantas Nova Dinastias já foram fundadas (§6). Permanente — não se deriva das coroas (que crescem por valor). */
@@ -182,9 +171,9 @@ export const useGame = create<GameState>((set, get) => ({
   peixes: 0,
   lifetime: 0,
   coroas: 0,
+  gastos: 0,
   gatos: gatosZerados(),
   habilidades: [],
-  eraMaisAlta: 1,
   seloImperial: false,
   dinastias: 0,
   runInicioTs: Date.now(),
@@ -197,14 +186,29 @@ export const useGame = create<GameState>((set, get) => ({
     const s = get();
     const b = BUILDINGS.find((x) => x.id === buildingId);
     if (!b) return;
-    if (!predioDesbloqueado(b, s.lifetime)) return; // não compra num prédio ainda oculto
+    if (!predioDesbloqueado(b, s.gatos)) return; // cadeia de compra: prédio ainda oculto (§4.6.9)
     const possui = s.gatos[buildingId] ?? 0;
     const custo = custoDeVariosGatos(b.custoBasePorGato, possui, quantidade);
     if (s.peixes < custo) return;
-    set({
+
+    const novosGatos = { ...s.gatos, [buildingId]: possui + quantidade };
+    const patch: Partial<GameState> = {
       peixes: s.peixes - custo,
-      gatos: { ...s.gatos, [buildingId]: possui + quantidade },
-    });
+      gastos: s.gastos + custo, // gasto conta pro prestígio (§6, ADR-0003)
+      gatos: novosGatos,
+    };
+
+    // Construir a Obra (a 1ª compra dela) VIRA a Era (§4.6.9): revela o 1º prédio da Era seguinte
+    // via cadeia (automático), troca o mundo (Era derivada de gatos) e dispara fanfarra + lump.
+    if (b.ehObra && possui === 0) {
+      const novaEra = eraDeObras(obrasConstruidas(novosGatos));
+      if (novaEra <= ERAS.length) {
+        // A última Obra do slice "apontaria" para uma Era inexistente — aí não há virada a comemorar.
+        patch.eraFanfarra = eraPorNivel(novaEra);
+        patch.peixes = (patch.peixes as number) + lumpDaEra(prodPorSegundo(s), LUMP_SEGUNDOS, LUMP_PISO);
+      }
+    }
+    set(patch);
   },
 
   comprarHabilidade: (abilityId) => {
@@ -213,31 +217,35 @@ export const useGame = create<GameState>((set, get) => ({
     if (!a) return; // habilidade desconhecida
     if (s.habilidades.includes(abilityId)) return; // já comprada
     const b = BUILDINGS.find((x) => x.id === a.buildingId);
-    if (!b || !predioDesbloqueado(b, s.lifetime)) return; // prédio ainda oculto
+    if (!b || !predioDesbloqueado(b, s.gatos)) return; // cadeia de compra: prédio ainda oculto
     if (!habilidadeDesbloqueada(s.gatos[a.buildingId] ?? 0, a.marco)) return; // marco não atingido
     if (s.peixes < a.custo) return; // sem peixes
-    set({ peixes: s.peixes - a.custo, habilidades: [...s.habilidades, abilityId] });
+    set({
+      peixes: s.peixes - a.custo,
+      gastos: s.gastos + a.custo, // gasto conta pro prestígio (§6, ADR-0003)
+      habilidades: [...s.habilidades, abilityId],
+    });
   },
 
   clicar: () => {
     const s = get();
     const ganho = poderDeClique(s);
-    set(aplicarGanhoLifetime(s, ganho));
+    set(creditarGanho(s, ganho));
   },
 
   novaDinastia: () => {
     const s = get();
-    // A coroa lê o `lifetime` da run que está acabando (produção genuína, exclui lumps de Era §4.5).
-    const coroasGanhas = coroasGanhasNaRun(s.lifetime);
+    // A coroa escala pelos peixes GASTOS na run (§6, ADR-0003) — não mais pelo `lifetime`.
+    const coroasGanhas = coroasGanhasNaRun(s.gastos);
     if (coroasGanhas < 1) return; // guarda: o botão só aparece com ≥1 coroa, mas a ação também protege
 
-    // Reset em cascata de `lifetime → 0`: prédios re-travam e a Era volta ao Beco (ambos derivam dele).
+    // Reset: gatos zerados ⇒ a Era volta ao Beco e os prédios re-travam (ambos derivam de gatos).
     set({
       peixes: 0,
       lifetime: 0,
+      gastos: 0,
       gatos: gatosZerados(),
       habilidades: [],
-      eraMaisAlta: 1,
       coroas: s.coroas + coroasGanhas, // coroa persiste como contagem (§6)
       seloImperial: true, // concedido na 1ª Dinastia; idempotente depois (o ×1,5 nunca empilha)
       dinastias: s.dinastias + 1, // contagem permanente de fundações
@@ -254,7 +262,7 @@ export const useGame = create<GameState>((set, get) => ({
     const s = get();
     const ganho = prodPorSegundo(s) * dtSegundos;
     if (ganho <= 0) return;
-    set(aplicarGanhoLifetime(s, ganho));
+    set(creditarGanho(s, ganho));
   },
 
   hidratar: () => {
@@ -270,6 +278,7 @@ export const useGame = create<GameState>((set, get) => ({
       peixes: save.peixes,
       lifetime: save.lifetime,
       coroas: save.coroas,
+      gastos: save.gastos,
       gatos: normalizarGatos(save.gatos),
       habilidades: normalizarHabilidades(save.habilidades),
       // O Selo entra no `base` porque o cálculo offline usa `prodPorSegundo(base)`, que já o inclui
@@ -280,21 +289,13 @@ export const useGame = create<GameState>((set, get) => ({
     // A produção que alimenta o offline precisa ser a EFETIVA (com coroas já embutidas),
     // pois `domain/offline` não reaplica coroas. `prodPorSegundo` entrega exatamente isso.
     const ganho = calcularGanhoOffline(prodPorSegundo(base), Date.now() - save.ts);
-    const lifetimeFinal = base.lifetime + ganho.peixes;
 
-    // A Era é sincronizada em SILÊNCIO na hidratação: quem paga o lump é o cruzamento AO VIVO
-    // (§4.5), não a hidratação. Saves antigos sem `eraMaisAlta` derivam do lifetime. Como o offline
-    // pode ter cruzado Eras enquanto ausente, subimos a Era até o lifetime final — sem lump/fanfarra.
-    const eraSalva =
-      typeof save.eraMaisAlta === "number" && save.eraMaisAlta >= 1
-        ? Math.floor(save.eraMaisAlta)
-        : nivelDaEra(base.lifetime, LIMIARES);
-
+    // Nada de Era na hidratação: a Era deriva de `gatos` (já carregado) — construir Obra é ato ao
+    // vivo, nunca offline (§4.6.9). O offline só credita peixes+lifetime (vitrine), não gastos.
     set({
       ...base,
       peixes: base.peixes + ganho.peixes,
-      lifetime: lifetimeFinal,
-      eraMaisAlta: Math.max(eraSalva, nivelDaEra(lifetimeFinal, LIMIARES)),
+      lifetime: base.lifetime + ganho.peixes,
       dinastias: save.dinastias ?? 0,
       // Save antigo sem `runInicioTs` → carimba agora (a run já corria, mas não sabemos desde quando).
       runInicioTs: save.runInicioTs ?? Date.now(),
@@ -309,9 +310,9 @@ export const useGame = create<GameState>((set, get) => ({
       peixes: s.peixes,
       lifetime: s.lifetime,
       coroas: s.coroas,
+      gastos: s.gastos,
       gatos: s.gatos,
       habilidades: s.habilidades,
-      eraMaisAlta: s.eraMaisAlta,
       seloImperial: s.seloImperial,
       dinastias: s.dinastias,
       runInicioTs: s.runInicioTs,
@@ -325,12 +326,32 @@ export const useGame = create<GameState>((set, get) => ({
 // --- Seletores puros para a UI (evitam reimplementar a economia no componente) ---
 
 /**
- * Um prédio está desbloqueado quando os peixes acumulados na run cruzaram seu limiar (§3.3).
- * Como `lifetime` só cresce dentro de uma run, "desbloqueado uma vez" é automático — não
- * precisa persistir um flag: se já passou do limiar, `lifetime >= desbloqueio` continua verdade.
+ * Cadeia de compra (§4.6.9): um prédio está desbloqueado quando o **anterior na escada** já tem ≥1
+ * gato (comprar o 1º gato de um prédio revela o próximo). O 1º prédio (Caixa) está sempre revelado.
+ *
+ * Não precisa de flag persistido: `gatos` (já salvo) É o registro dos atos concretos que dirigem a
+ * progressão (ADR-0003). Como não se vende gato, o desbloqueio nunca regride dentro da run. O gate
+ * real é o **custo crescente** do 1º gato (auto-pacing), não um limiar de `lifetime`.
  */
-export function predioDesbloqueado(b: Building, lifetime: number): boolean {
-  return lifetime >= b.desbloqueio;
+export function predioDesbloqueado(b: Building, gatos: Record<string, number>): boolean {
+  const idx = BUILDINGS.findIndex((x) => x.id === b.id);
+  if (idx <= 0) return true; // 1º prédio (ou id desconhecido) sempre visível
+  const anterior = BUILDINGS[idx - 1]!;
+  return (gatos[anterior.id] ?? 0) >= 1;
+}
+
+/** Quantas Obras já foram construídas na run (têm ≥1 gato). A Era deriva disto (§4.6.9). */
+export function obrasConstruidas(gatos: Record<string, number>): number {
+  return BUILDINGS.filter((b) => b.ehObra && (gatos[b.id] ?? 0) >= 1).length;
+}
+
+/**
+ * Nível da Era atual da run (§4.6.9): 1 (Beco) + nº de Obras construídas. Derivado de `gatos` — sem
+ * estado separado. Pode exceder o total de Eras do slice ao construir a última Obra; `eraPorNivel`
+ * clampa na exibição.
+ */
+export function eraAtual(gatos: Record<string, number>): number {
+  return eraDeObras(obrasConstruidas(gatos));
 }
 
 type EstadoProducao = Pick<GameState, "gatos" | "coroas" | "habilidades" | "seloImperial">;

@@ -45,8 +45,12 @@ export interface PassiveAbility {
   readonly efeito: EfeitoPassiva;
 }
 
-/** Custo ≈ "mais 10 gatos" no ponto do marco. Fator de balanceamento (§8), ajustável. */
-const FATOR_CUSTO = 10;
+/**
+ * Multiplicador do custo da passiva sobre o custo do gato no marco. Baixado de 10 → 4 (v0.7): a 1ª
+ * passiva (Caixa m10) custava ~607 (~40 gatos), cara demais no início; a ~4× fica ~0,8× do que se
+ * gastou em gatos até o marco (referência Cookie Clicker). Fator de balanceamento (§8), ajustável.
+ */
+const FATOR_CUSTO = 4;
 
 function custoNoMarco(custoBasePorGato: number, marco: number): number {
   return Math.round(custoBasePorGato * COST_GROWTH ** marco * FATOR_CUSTO);

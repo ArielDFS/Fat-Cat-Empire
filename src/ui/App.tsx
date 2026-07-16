@@ -8,6 +8,7 @@ import {
   poderDeClique,
   custoDaCompra,
   predioDesbloqueado,
+  eraAtual,
   habilidadesDoPredio,
   multiplicadorProducaoDoPredio,
 } from "../state/store";
@@ -126,9 +127,9 @@ export function App() {
   const peixes = useGame((s) => s.peixes);
   const lifetime = useGame((s) => s.lifetime);
   const coroas = useGame((s) => s.coroas);
+  const gastos = useGame((s) => s.gastos);
   const gatos = useGame((s) => s.gatos);
   const habilidades = useGame((s) => s.habilidades);
-  const eraMaisAlta = useGame((s) => s.eraMaisAlta);
   const seloImperial = useGame((s) => s.seloImperial);
   const dinastias = useGame((s) => s.dinastias);
   const eraFanfarra = useGame((s) => s.eraFanfarra);
@@ -142,9 +143,10 @@ export function App() {
 
   const rate = prodPorSegundo({ gatos, coroas, habilidades, seloImperial });
   const clickPow = poderDeClique({ gatos, coroas, habilidades, seloImperial });
-  const era = eraPorNivel(eraMaisAlta);
-  const podeDinastia = podeFundarNovaDinastia(lifetime);
-  const resumoDinastia = resumoNovaDinastia(lifetime, coroas);
+  const eraNivel = eraAtual(gatos); // 1 + Obras construídas (§4.6.9)
+  const era = eraPorNivel(eraNivel);
+  const podeDinastia = podeFundarNovaDinastia(gastos);
+  const resumoDinastia = resumoNovaDinastia(gastos, coroas);
 
   function confirmarDinastia() {
     novaDinastia();
@@ -177,9 +179,11 @@ export function App() {
     });
   }, [eraFanfarra]);
 
-  // Cascata de desbloqueio (§3.3): só mostra prédios cujo limiar já foi cruzado nesta run.
-  const desbloqueados = BUILDINGS.filter((b) => predioDesbloqueado(b, lifetime));
-  const proximo = BUILDINGS.find((b) => !predioDesbloqueado(b, lifetime));
+  // Cadeia de compra (§4.6.9): só mostra prédios cujo anterior já tem ≥1 gato.
+  const desbloqueados = BUILDINGS.filter((b) => predioDesbloqueado(b, gatos));
+  const proximo = BUILDINGS.find((b) => !predioDesbloqueado(b, gatos));
+  // O prédio cujo 1º gato revela o `proximo` é o último desbloqueado (o anterior a ele na escada).
+  const reveladorDoProximo = desbloqueados[desbloqueados.length - 1];
 
   function clicarNoPeixe() {
     clicar();
@@ -192,7 +196,7 @@ export function App() {
   }
 
   return (
-    <div className="app" style={{ ["--sky" as string]: `url(${skyDaEra(eraMaisAlta)})` }}>
+    <div className="app" style={{ ["--sky" as string]: `url(${skyDaEra(eraNivel)})` }}>
       <div className="skybg" aria-hidden="true" />
 
       {eraFanfarra && (
@@ -316,7 +320,7 @@ export function App() {
           <img className="brand-logo" src="/logo_lockup.png" alt="Fat Cat Empire" />
           <span className="tag">dev</span>
         </div>
-        <div className="era-badge" title="A Era avança com o total de peixes da run (§4.5)">
+        <div className="era-badge" title="A Era avança ao construir a Obra de cada Era (§4.6.9)">
           <span className="era-num">Era {romano(era.nivel)} · {era.escala}</span>
           <span className="era-nome">{era.nome}</span>
         </div>
@@ -344,7 +348,7 @@ export function App() {
               <span className="dynasty-ico" aria-hidden="true">👑</span>
               <span className="dynasty-txt">
                 <b>Nova Dinastia</b>
-                <span>+{fmt(coroasGanhasNaRun(lifetime))} coroas</span>
+                <span>+{fmt(coroasGanhasNaRun(gastos))} coroas</span>
               </span>
             </button>
           )}
@@ -375,6 +379,9 @@ export function App() {
               <span>peixes / segundo</span>
             </div>
             <p className="clickhint">clique <b>+{fmt(clickPow)}</b> 🐟</p>
+            <p className="vitrine" title="Total de peixes já produzidos nesta run (estatística)">
+              🐟 {fmt(lifetime)} pescados na run
+            </p>
           </div>
         </section>
 
@@ -514,8 +521,9 @@ export function App() {
                 <div className="locked-copy">
                   <b>Prédio bloqueado</b>
                   <span>
-                    Acumule {fmt(proximo.desbloqueio)} peixes na run para revelar
-                    {" "}({fmt(Math.max(0, proximo.desbloqueio - lifetime))} restantes)
+                    {reveladorDoProximo
+                      ? `Compre o 1º gato de ${reveladorDoProximo.nome} para revelar`
+                      : "Compre o 1º gato para revelar o próximo prédio"}
                   </span>
                 </div>
               </div>

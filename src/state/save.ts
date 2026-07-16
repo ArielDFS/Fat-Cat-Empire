@@ -12,21 +12,26 @@
 
 const SAVE_KEY = "fat-cat-empire:save";
 
-/** Bump quando o formato de `SaveData` mudar de forma incompatível (migração entra em `carregarSave`). */
-export const SAVE_VERSION = 1;
+/**
+ * Bump quando o formato de `SaveData` mudar de forma incompatível (migração entra em `carregarSave`).
+ * v2 (2026-07-16, migração do motor v0.6/ADR-0003): +`gastos` (base do prestígio), −`eraMaisAlta`
+ * (a Era passou a derivar de `gatos`). Saves v1 são migrados (não descartados) — ver `migrarV1paraV2`.
+ */
+export const SAVE_VERSION = 2;
 
 export interface SaveData {
   versao: number;
   /** `Date.now()` no momento da gravação — base do cálculo de ausência (§7). */
   ts: number;
   peixes: number;
+  /** Peixes já produzidos na run. Vitrine only (§4.6.9) — dirige zero mecânicas. */
   lifetime: number;
   coroas: number;
+  /** Peixes GASTOS na run (gatos + passivas + Obras) — base do prestígio na v0.6 (§6). */
+  gastos: number;
   gatos: Record<string, number>;
   /** Ids das Habilidades passivas compradas na run (§3.4). Ausente em saves v0.3 → []. */
   habilidades: string[];
-  /** Era mais alta atingida na run (§4.5). Ausente em saves antigos → derivado do lifetime na store. */
-  eraMaisAlta?: number;
   /** Selo Imperial concedido (§3.6). Ausente em saves antigos → false (prestígio nunca esteve ligado). */
   seloImperial?: boolean;
   /** Nº de Nova Dinastias fundadas (§6). Ausente em saves antigos → 0. */
@@ -47,14 +52,27 @@ export function gravarSave(payload: SavePayload): void {
   }
 }
 
+/**
+ * Migra um save v1 (modelo `lifetime`) para o formato v2 (motor v0.6). Preserva recursos e gatos;
+ * **semeia `gastos ≈ lifetime`** (ADR-0003: "gastos ≈ produção"), o que aproxima o progresso de
+ * prestígio do jogador. Descarta `eraMaisAlta` — a Era re-deriva das Obras em `gatos` (que na v1
+ * ainda não existiam como prédios, então uma run v1 volta ao Beco visualmente; os recursos ficam).
+ */
+function migrarV1paraV2(v1: Record<string, unknown>): Record<string, unknown> {
+  const lifetime = typeof v1.lifetime === "number" && v1.lifetime > 0 ? v1.lifetime : 0;
+  const { eraMaisAlta: _descartado, ...resto } = v1;
+  return { ...resto, versao: SAVE_VERSION, gastos: lifetime };
+}
+
 export function carregarSave(): SaveData | null {
   try {
     const cru = localStorage.getItem(SAVE_KEY);
     if (!cru) return null;
 
-    const data = JSON.parse(cru) as Partial<SaveData>;
+    let data = JSON.parse(cru) as Partial<SaveData> & Record<string, unknown>;
 
-    // Versão diferente: descarta (o slot de migração futura entra aqui).
+    // Migração de versão: v1 → v2 (motor v0.6). Outras versões desconhecidas → descarta.
+    if (data.versao === 1) data = migrarV1paraV2(data) as typeof data;
     if (data.versao !== SAVE_VERSION) return null;
 
     const ok =
@@ -66,35 +84,34 @@ export function carregarSave(): SaveData | null {
       data.gatos !== null;
     if (!ok) return null;
 
-    // `habilidades` (§3.4) entrou depois: saves anteriores não têm o campo → default [].
-    // Aceita só strings; a store descarta ids desconhecidos (normalizarHabilidades).
+    // `habilidades` (§3.4): aceita só strings; a store descarta ids desconhecidos (normalizarHabilidades).
     const habilidades = Array.isArray(data.habilidades)
       ? data.habilidades.filter((x): x is string => typeof x === "string")
       : [];
 
-    // `eraMaisAlta` (§4.5) entrou depois: ausente/ inválido → undefined (a store deriva do lifetime).
-    const eraMaisAlta =
-      typeof data.eraMaisAlta === "number" && Number.isFinite(data.eraMaisAlta) && data.eraMaisAlta >= 1
-        ? Math.floor(data.eraMaisAlta)
-        : undefined;
+    // `gastos` (§6, v0.6): base do prestígio. Ausente/inválido → 0 (defensivo).
+    const gastos =
+      typeof data.gastos === "number" && Number.isFinite(data.gastos) && data.gastos >= 0
+        ? data.gastos
+        : 0;
 
-    // `seloImperial` (§3.6) entrou depois: só aceita `true` explícito; qualquer outra coisa → undefined
+    // `seloImperial` (§3.6): só aceita `true` explícito; qualquer outra coisa → undefined
     // (a store trata como false). Nenhum save antigo já concedeu o Selo, então nada se perde.
     const seloImperial = data.seloImperial === true ? true : undefined;
 
-    // `dinastias` (§6) entrou depois: ausente/ inválido → undefined (a store trata como 0).
+    // `dinastias` (§6): ausente/ inválido → undefined (a store trata como 0).
     const dinastias =
       typeof data.dinastias === "number" && Number.isFinite(data.dinastias) && data.dinastias >= 0
         ? Math.floor(data.dinastias)
         : undefined;
 
-    // `runInicioTs` (§6) entrou depois: ausente/ inválido → undefined (a store carimba `agora`).
+    // `runInicioTs` (§6): ausente/ inválido → undefined (a store carimba `agora`).
     const runInicioTs =
       typeof data.runInicioTs === "number" && Number.isFinite(data.runInicioTs)
         ? data.runInicioTs
         : undefined;
 
-    return { ...(data as SaveData), habilidades, eraMaisAlta, seloImperial, dinastias, runInicioTs };
+    return { ...(data as SaveData), habilidades, gastos, seloImperial, dinastias, runInicioTs };
   } catch {
     return null; // JSON corrompido ou LocalStorage inacessível.
   }
