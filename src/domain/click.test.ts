@@ -11,6 +11,7 @@ describe("peixesPorClique", () => {
 
   it("cliqueMult (C1) multiplica o poder de clique", () => {
     expect(peixesPorClique(100_000, 3)).toBeCloseTo(100_000 * CLICK_FACTOR * 3);
+    expect(peixesPorClique(0, 1.5)).toBeCloseTo(1.5); // o piso nÃ£o apaga o bÃ´nus no bootstrap
   });
 
   it("colheita (C2) soma ao CLICK_FACTOR efetivo", () => {

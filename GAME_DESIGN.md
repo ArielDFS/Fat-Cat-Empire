@@ -159,7 +159,7 @@ As passivas vêm em **dois sabores que competem pelos mesmos peixes** (ver [ADR-
 O clique é um **eixo de progressão legítimo** (ADR-0001), não mais um resíduo. Base:
 
 ```
-peixes_por_clique = max(1, prod_por_segundo * CLICK_FACTOR_efetivo * mult_clique)
+peixes_por_clique = max(1, prod_por_segundo * CLICK_FACTOR_efetivo) * mult_clique
 CLICK_FACTOR_efetivo = CLICK_FACTOR + Σ bônus_de_colheita (C2)
 mult_clique          = Π multiplicadores das Passivas de Clique compradas (C1)
 ```

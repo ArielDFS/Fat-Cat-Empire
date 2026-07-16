@@ -4,7 +4,7 @@
  * Não importa nada de `ui/`, `state/` nem `data/`. O clique é **sempre uma fração da produção**,
  * nunca um "+N fixo" — é isso que o mantém relevante enquanto a produção cresce (ADR-0002):
  *
- *     valor_base_do_clique = max(1, prod_por_segundo × (CLICK_FACTOR + colheita) × cliqueMult)
+ *     valor_base_do_clique = max(1, prod_por_segundo × (CLICK_FACTOR + colheita)) × cliqueMult
  *     peixes_creditados   = valor_base_do_clique × fator_de_cadência
  *
  * `colheita` (C2) e `cliqueMult` (C1) vêm das Passivas de Clique compradas. O piso de 1 cobre o
@@ -25,7 +25,9 @@ import {
  */
 export function peixesPorClique(prodPorSegundo: number, cliqueMult = 1, colheita = 0): number {
   const fatorEfetivo = CLICK_FACTOR + colheita;
-  return Math.max(1, prodPorSegundo * fatorEfetivo * cliqueMult);
+  // O piso protege a base do clique, mas não pode apagar o investimento em C1:
+  // mesmo no bootstrap, ×1,5 precisa render 1,5 por toque.
+  return Math.max(1, prodPorSegundo * fatorEfetivo) * cliqueMult;
 }
 
 /**
