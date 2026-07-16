@@ -11,8 +11,12 @@ import {
   eraAtual,
   habilidadesDoPredio,
   multiplicadorProducaoDoPredio,
+  corteUI,
 } from "../state/store";
+import { buffNoNivel } from "../domain/legendaries";
+import type { TipoEfeitoLendario } from "../domain/legendaries";
 import { descreverEfeito, poolDe } from "../data/abilities";
+import { SELO_LENDARIO_ID } from "../data/legendaries";
 import { eraPorNivel } from "../data/eras";
 import { podeFundarNovaDinastia, coroasGanhasNaRun, resumoNovaDinastia } from "../domain/prestige";
 import { iniciarAutoSave } from "../state/save";
@@ -91,6 +95,29 @@ function fmtDuracao(segundos: number): string {
 
 const QUANTIDADES = [1, 10, 100] as const;
 
+/** Rótulo do papel de um Lendário (§4.6.7). */
+const PAPEL_LENDARIO: Record<TipoEfeitoLendario, string> = {
+  producaoMult: "Produção global",
+  cliqueMult: "Poder de clique",
+  offlineMult: "Ganho offline",
+  lumpMult: "Virada de Era",
+  custoReducao: "Custo dos gatos",
+};
+
+/** Descreve o buff de um Lendário: o total no nível atual, ou o efeito por-nível (nível 0 = oferta). */
+function descreverBuffLendario(tipo: TipoEfeitoLendario, porNivel: number, nivel: number): string {
+  if (nivel <= 0) {
+    // Na oferta: mostra o efeito por nível.
+    return tipo === "custoReducao"
+      ? `−${Math.round(porNivel * 100)}% custo / nível`
+      : `×${porNivel.toLocaleString("pt-BR")} / nível`;
+  }
+  const f = buffNoNivel(tipo, porNivel, nivel);
+  return tipo === "custoReducao"
+    ? `custo ×${f.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}`
+    : `×${f.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}`;
+}
+
 /** Numeral romano para o grau da Era (I..VI no slice). */
 const ROMANOS = ["", "I", "II", "III", "IV", "V", "VI"] as const;
 function romano(n: number): string {
@@ -123,6 +150,7 @@ export function App() {
   const popId = useRef(0);
 
   const [confirmandoDinastia, setConfirmandoDinastia] = useState(false);
+  const [corteAberta, setCorteAberta] = useState(false);
 
   const peixes = useGame((s) => s.peixes);
   const lifetime = useGame((s) => s.lifetime);
@@ -130,23 +158,32 @@ export function App() {
   const gastos = useGame((s) => s.gastos);
   const gatos = useGame((s) => s.gatos);
   const habilidades = useGame((s) => s.habilidades);
-  const seloImperial = useGame((s) => s.seloImperial);
+  const lendarios = useGame((s) => s.lendarios);
+  const ofertaDraft = useGame((s) => s.ofertaDraft);
+  const rerollsFeitos = useGame((s) => s.rerollsFeitos);
+  const eraMaxAtingida = useGame((s) => s.eraMaxAtingida);
+  const temSelo = (lendarios[SELO_LENDARIO_ID] ?? 0) > 0;
   const dinastias = useGame((s) => s.dinastias);
   const eraFanfarra = useGame((s) => s.eraFanfarra);
   const clicar = useGame((s) => s.clicar);
   const comprarGatos = useGame((s) => s.comprarGatos);
   const comprarHabilidade = useGame((s) => s.comprarHabilidade);
   const novaDinastia = useGame((s) => s.novaDinastia);
+  const recrutarLendario = useGame((s) => s.recrutarLendario);
+  const rerollOferta = useGame((s) => s.rerollOferta);
+  const subirNivelLendario = useGame((s) => s.subirNivelLendario);
   const ganhoOffline = useGame((s) => s.ganhoOffline);
   const fecharModalOffline = useGame((s) => s.fecharModalOffline);
   const fecharFanfarra = useGame((s) => s.fecharFanfarra);
 
-  const rate = prodPorSegundo({ gatos, coroas, habilidades, seloImperial });
-  const clickPow = poderDeClique({ gatos, coroas, habilidades, seloImperial });
+  const rate = prodPorSegundo({ gatos, habilidades, lendarios });
+  const clickPow = poderDeClique({ gatos, habilidades, lendarios });
   const eraNivel = eraAtual(gatos); // 1 + Obras construídas (§4.6.9)
   const era = eraPorNivel(eraNivel);
   const podeDinastia = podeFundarNovaDinastia(gastos);
   const resumoDinastia = resumoNovaDinastia(gastos, coroas);
+  const corte = corteUI({ coroas, lendarios, ofertaDraft, rerollsFeitos, eraMaxAtingida });
+  const temCorte = corte.coroas > 0 || corte.recrutados.length > 0;
 
   function confirmarDinastia() {
     novaDinastia();
@@ -280,8 +317,8 @@ export function App() {
                 <span className="dinastia-col-lab">Você mantém</span>
                 <ul>
                   <li>Coroas Felinas</li>
-                  <li>Bônus global</li>
-                  {seloImperial && <li>Selo Imperial</li>}
+                  <li>Gatos Lendários</li>
+                  {temSelo && <li>Selo Imperial</li>}
                   <li>Conquistas</li>
                 </ul>
               </div>
@@ -291,13 +328,11 @@ export function App() {
               <span>(total {fmt(resumoDinastia.coroasDepois)})</span>
             </p>
             <p className="dinastia-mult">
-              Produção global{" "}
-              <b>×{resumoDinastia.multiplicadorAtual.toFixed(2).replace(".", ",")}</b> →{" "}
-              <b>×{resumoDinastia.multiplicadorDepois.toFixed(2).replace(".", ",")}</b>
+              Coroas pra gastar na <b>Corte Lendária</b> (recrutar e evoluir Gatos Lendários).
             </p>
-            {!seloImperial && (
+            {!temSelo && (
               <p className="dinastia-selo">
-                🏅 E a Caixa de Papelão recebe o <b>Selo Imperial</b>: produção ×1,5, pra sempre.
+                🏅 E você ganha o <b>Selo Imperial</b> (Gato Lendário #0): produção ×1,5, pra sempre.
               </p>
             )}
             <div className="dinastia-acoes">
@@ -311,6 +346,96 @@ export function App() {
                 Fundar Dinastia
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {corteAberta && (
+        <div className="modal-backdrop" role="presentation" onClick={() => setCorteAberta(false)}>
+          <div
+            className="modal modal-corte"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="corte-titulo"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="corte-titulo">Corte Lendária 🐈‍⬛</h2>
+            <p className="corte-coroas">👑 <b>{fmt(corte.coroas)}</b> coroas</p>
+
+            {corte.recrutados.length > 0 && (
+              <div className="corte-sec">
+                <h3 className="corte-h">Sua Corte</h3>
+                <ul className="corte-lista">
+                  {corte.recrutados.map((r) => (
+                    <li key={r.def.id} className="corte-card">
+                      <span className="corte-emoji" aria-hidden="true">{r.def.emoji}</span>
+                      <span className="corte-info">
+                        <b>{r.def.nome} <span className="corte-nv">nível {r.nivel}</span></b>
+                        <span className="corte-papel">
+                          {PAPEL_LENDARIO[r.def.efeito.tipo]}:{" "}
+                          {descreverBuffLendario(r.def.efeito.tipo, r.def.efeito.porNivel, r.nivel)}
+                        </span>
+                      </span>
+                      <button
+                        className="corte-btn-acao"
+                        disabled={!r.podeSubir}
+                        onClick={() => subirNivelLendario(r.def.id)}
+                        title="Subir nível"
+                      >
+                        ▲ 👑 {fmt(r.custoProxNivel)}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="corte-sec">
+              <h3 className="corte-h">
+                Recrutar {!corte.poolVazio && `· escolha 1 de ${corte.oferta.length}`}
+              </h3>
+              {corte.poolVazio ? (
+                <p className="corte-vazio">
+                  🏆 Coleção completa — todos os Lendários já disponíveis estão na sua Corte. Alcance
+                  Eras mais altas pra destravar novos.
+                </p>
+              ) : (
+                <>
+                  <ul className="corte-lista">
+                    {corte.oferta.map((o) => (
+                      <li key={o.def.id} className="corte-card corte-oferta">
+                        <span className="corte-emoji" aria-hidden="true">{o.def.emoji}</span>
+                        <span className="corte-info">
+                          <b>{o.def.nome}</b>
+                          <span className="corte-desc">{o.def.descricao}</span>
+                          <span className="corte-papel">
+                            {PAPEL_LENDARIO[o.def.efeito.tipo]}:{" "}
+                            {descreverBuffLendario(o.def.efeito.tipo, o.def.efeito.porNivel, 0)}
+                          </span>
+                        </span>
+                        <button
+                          className="corte-btn-acao"
+                          disabled={!o.podeRecrutar}
+                          onClick={() => recrutarLendario(o.def.id)}
+                          title="Recrutar"
+                        >
+                          👑 {fmt(o.custoRecrutar)}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    className="corte-reroll"
+                    disabled={!corte.podeReroll}
+                    onClick={() => rerollOferta()}
+                  >
+                    🎲 Trocar oferta — 👑 {fmt(corte.custoReroll)}
+                  </button>
+                </>
+              )}
+            </div>
+
+            <button className="modal-ok" onClick={() => setCorteAberta(false)}>Fechar</button>
           </div>
         </div>
       )}
@@ -338,6 +463,19 @@ export function App() {
               <span className="res-ico res-seal" aria-hidden="true">🏅</span>
               <span className="res-txt"><span className="res-lab">Dinastias</span><b>{fmt(dinastias)}</b></span>
             </div>
+          )}
+          {temCorte && (
+            <button
+              className="corte-btn"
+              onClick={() => setCorteAberta(true)}
+              title="Corte Lendária — gaste Coroas em Gatos Lendários (§4.6.7)"
+            >
+              <span className="corte-btn-ico" aria-hidden="true">🐈‍⬛</span>
+              <span className="corte-btn-txt">
+                <b>Corte Lendária</b>
+                <span>{corte.recrutados.length} gato{corte.recrutados.length === 1 ? "" : "s"}</span>
+              </span>
+            </button>
           )}
           {podeDinastia && (
             <button
@@ -399,7 +537,7 @@ export function App() {
 
           {desbloqueados.map((b) => {
             const n = gatos[b.id] ?? 0;
-            const custo = custoDaCompra(gatos, b.id, qty);
+            const custo = custoDaCompra(gatos, lendarios, b.id, qty);
             const podeComprar = peixes >= custo;
             const multProducao = multiplicadorProducaoDoPredio(habilidades, b.id, n);
             // Todas as passivas do prédio (visíveis desde o desbloqueio, §3.4 / req UI).
@@ -417,7 +555,7 @@ export function App() {
                 <div className="lane-plate" title={b.descricao}>
                   <img className="lane-plate-ico" src={art.icone} alt={b.nome} />
                   <span className="lane-plate-nome">{b.nome}</span>
-                  {b.id === "caixa_papelao" && seloImperial && (
+                  {b.id === "caixa_papelao" && temSelo && (
                     <span
                       className="lane-selo"
                       title="Selo Imperial — produção global ×1,5, permanente (§3.6)"

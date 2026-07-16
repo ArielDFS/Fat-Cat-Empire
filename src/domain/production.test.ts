@@ -1,5 +1,4 @@
 import { describe, it, expect } from "vitest";
-import { CROWN_BONUS } from "./constants";
 import {
   producaoDoPredio,
   multiplicadorGlobal,
@@ -23,25 +22,16 @@ describe("producaoDoPredio", () => {
   });
 });
 
-describe("multiplicadorGlobal", () => {
-  it("sem coroas nem bônus, o multiplicador é 1", () => {
-    expect(multiplicadorGlobal(0)).toBeCloseTo(1);
+describe("multiplicadorGlobal (ADR-0004: tudo multiplicativo)", () => {
+  it("sem Lendários nem evento, o multiplicador é 1", () => {
+    expect(multiplicadorGlobal()).toBeCloseTo(1);
+    expect(multiplicadorGlobal(1, 1)).toBeCloseTo(1);
   });
 
-  it("cada coroa soma CROWN_BONUS de forma aditiva", () => {
-    expect(multiplicadorGlobal(10)).toBeCloseTo(1 + CROWN_BONUS * 10); // 1.2
-    expect(multiplicadorGlobal(1)).toBeCloseTo(1.02);
-  });
-
-  it("habilidades globais e evento multiplicam por fora", () => {
-    // (1 + 0.02*5) * 1.5 * 7 = 1.1 * 1.5 * 7 = 11.55
-    expect(multiplicadorGlobal(5, 1.5, 7)).toBeCloseTo(11.55);
-  });
-
-  it("respeita a ordem aditiva-dentro / multiplicativa-fora", () => {
-    // Se fosse tudo aditivo daria 1 + 0.02*5 + 0.5 = 1.6; o correto é 1.1 * 1.5 = 1.65.
-    expect(multiplicadorGlobal(5, 1.5)).toBeCloseTo(1.65);
-    expect(multiplicadorGlobal(5, 1.5)).not.toBeCloseTo(1.6);
+  it("produção dos Lendários × evento (multiplicativo)", () => {
+    expect(multiplicadorGlobal(1.5)).toBeCloseTo(1.5); // só Selo #0
+    expect(multiplicadorGlobal(1.5, 7)).toBeCloseTo(10.5); // Selo × Festival ×7
+    expect(multiplicadorGlobal(3, 2)).toBeCloseTo(6);
   });
 });
 
@@ -72,13 +62,13 @@ describe("producaoPorSegundo (composição)", () => {
       { prodPorGato: 0.1, qtdGatos: 10, habilidadesPassivasMult: 2 }, // 2
       { prodPorGato: 1, qtdGatos: 5 }, //                                5
     ];
-    // base = 7 ; global com 10 coroas = 1.2 -> 8.4
-    expect(producaoPorSegundo(predios, 10)).toBeCloseTo(8.4);
+    // base = 7 ; Lendários de produção ×1,5 -> 10,5
+    expect(producaoPorSegundo(predios, 1.5)).toBeCloseTo(10.5);
   });
 
   it("é equivalente a chamar producaoTotal com multiplicadorGlobal", () => {
     const predios = [{ prodPorGato: 47, qtdGatos: 12, habilidadesPassivasMult: 4 }];
-    const esperado = producaoTotal(predios, multiplicadorGlobal(3, 1.5, 7));
-    expect(producaoPorSegundo(predios, 3, 1.5, 7)).toBeCloseTo(esperado);
+    const esperado = producaoTotal(predios, multiplicadorGlobal(1.5, 7));
+    expect(producaoPorSegundo(predios, 1.5, 7)).toBeCloseTo(esperado);
   });
 });

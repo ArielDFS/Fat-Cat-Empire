@@ -24,10 +24,31 @@ import type { PredioProdutor } from "../domain/production";
 import { calcularGanhoOffline } from "../domain/offline";
 import type { GanhoOffline } from "../domain/offline";
 import { coroasGanhasNaRun } from "../domain/prestige";
-import { SELO_IMPERIAL_MULT } from "../domain/constants";
 import { eraDeObras, lumpDaEra } from "../domain/era";
 import { ERAS, LUMP_SEGUNDOS, LUMP_PISO, eraPorNivel } from "../data/eras";
 import type { Era } from "../data/eras";
+import {
+  multiplicadoresLendarios,
+  custoSubirNivel,
+  custoRecrutar,
+  custoReroll,
+  sortearOferta,
+} from "../domain/legendaries";
+import type { EfeitoAtivo, MultsLendarios } from "../domain/legendaries";
+import {
+  LEGENDARIES,
+  lendarioPorId,
+  poolDisponivel,
+  SELO_LENDARIO_ID,
+  RECRUTAR_BASE,
+  RECRUTAR_GROWTH,
+  NIVEL_BASE,
+  NIVEL_GROWTH,
+  REROLL_BASE,
+  REROLL_GROWTH,
+  DRAFT_K,
+} from "../data/legendaries";
+import type { LendarioDef } from "../data/legendaries";
 import { carregarSave, gravarSave } from "./save";
 
 /** gatos por prédio, tudo em zero. */
@@ -64,6 +85,17 @@ function normalizarGatos(salvos: Record<string, number>): Record<string, number>
   return base;
 }
 
+/** Descarta ids de Lendário desconhecidos e níveis inválidos de um save. */
+function normalizarLendarios(salvos: Record<string, number> | undefined): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [id, v] of Object.entries(salvos ?? {})) {
+    if (lendarioPorId(id) && typeof v === "number" && Number.isFinite(v) && v >= 1) {
+      out[id] = Math.floor(v);
+    }
+  }
+  return out;
+}
+
 /** Ponte data → domain: os efeitos das passivas compradas (opcionalmente filtradas por prédio). */
 function efeitosComprados(
   habilidades: readonly string[],
@@ -97,6 +129,33 @@ function efeitosCliqueGlobais(habilidades: readonly string[]): EfeitoClique[] {
   return efeitosComprados(habilidades).filter((e): e is EfeitoClique => poolDe(e) === "clique");
 }
 
+// --- Ponte da Corte Lendária (data + estado → domain) ---
+
+/** Efeitos ativos: cada Lendário recrutado (nível ≥ 1) achatado pro domain. */
+function efeitosAtivos(lendarios: Record<string, number>): EfeitoAtivo[] {
+  const out: EfeitoAtivo[] = [];
+  for (const def of LEGENDARIES) {
+    const nivel = lendarios[def.id] ?? 0;
+    if (nivel > 0) out.push({ tipo: def.efeito.tipo, porNivel: def.efeito.porNivel, nivel });
+  }
+  return out;
+}
+
+/** Os multiplicadores globais que a Corte concede (produção/clique/offline/lump/custo). */
+function multsDaCorte(lendarios: Record<string, number>): MultsLendarios {
+  return multiplicadoresLendarios(efeitosAtivos(lendarios));
+}
+
+/** Nº de Lendários NÃO-grátis já recrutados (base do custo de recrutar; o Selo #0 não conta). */
+function nRecrutados(lendarios: Record<string, number>): number {
+  return LEGENDARIES.filter((l) => !l.gratis && (lendarios[l.id] ?? 0) > 0).length;
+}
+
+/** Sorteia uma nova oferta de draft do pool elegível (RNG real fica aqui, fora do domain). */
+function gerarOferta(lendarios: Record<string, number>, eraMax: number): string[] {
+  return sortearOferta(poolDisponivel(lendarios, eraMax), DRAFT_K, Math.random);
+}
+
 /**
  * Credita um ganho de peixes da run (produção do tick ou clique). Move o `peixes` **e** o `lifetime`.
  *
@@ -124,20 +183,27 @@ export interface GameState {
   peixes: number;
   /** Peixes já produzidos na run. **Vitrine only (§4.6.9):** exibido, dirige zero mecânicas. */
   lifetime: number;
+  /** Coroas Felinas — a moeda GASTÁVEL da Corte Lendária (§6, ADR-0004). Permanente. */
   coroas: number;
   /**
-   * Peixes GASTOS na run (gatos + passivas + Obras) — a base do prestígio na v0.6 (§6, ADR-0003).
-   * `sqrt(gastos / DIVISOR)` = coroas. Zera na Nova Dinastia.
+   * Peixes GASTOS na run (gatos + passivas + Obras) — a base do prestígio (§6). `cbrt(gastos/DIV)` =
+   * coroas ganhas. Zera na Nova Dinastia.
    */
   gastos: number;
   gatos: Record<string, number>;
   /** Ids das Habilidades passivas já compradas na run (§3.4). Reseta na Nova Dinastia. */
   habilidades: string[];
-  /** Selo Imperial concedido? (§3.6) Habilidade global — produção ×1,5, permanente, sobrevive à Dinastia. */
-  seloImperial: boolean;
-  /** Quantas Nova Dinastias já foram fundadas (§6). Permanente — não se deriva das coroas (que crescem por valor). */
+  /** Gatos Lendários recrutados → nível (§4.6.7, ADR-0004). Permanente. O Selo Imperial é o #0. */
+  lendarios: Record<string, number>;
+  /** Oferta atual do draft (ids sorteados do pool). Persiste pra não sumir ao recarregar. */
+  ofertaDraft: string[];
+  /** Rerolls feitos desde o último recrutamento (custo de reroll sobe; zera ao recrutar). */
+  rerollsFeitos: number;
+  /** Era mais alta já atingida em QUALQUER run (permanente) — destrava tiers do pool de Lendários. */
+  eraMaxAtingida: number;
+  /** Quantas Nova Dinastias já foram fundadas (§6). Permanente. */
   dinastias: number;
-  /** `Date.now()` do início da run atual (§6). Re-armado na Nova Dinastia; base da conquista §12 (passo 8). */
+  /** `Date.now()` do início da run atual (§6). Re-armado na Nova Dinastia; base da conquista §12. */
   runInicioTs: number;
 
   /** Ganho da última ausência, enquanto o modal de retorno está aberto (null = sem modal). */
@@ -151,9 +217,15 @@ export interface GameState {
   comprarGatos: (buildingId: string, quantidade: number) => void;
   /** Compra uma Habilidade passiva destravada por marco, se der pra pagar (§3.4). */
   comprarHabilidade: (abilityId: string) => void;
+  /** Recruta um Lendário da oferta de draft, gastando Coroas (§4.6.7). */
+  recrutarLendario: (id: string) => void;
+  /** Paga Coroas pra sortear uma nova oferta de draft (§4.6.7). */
+  rerollOferta: () => void;
+  /** Sobe o nível de um Lendário recrutado, gastando Coroas (§4.6.7). */
+  subirNivelLendario: (id: string) => void;
   /** Um clique manual no peixe grande. */
   clicar: () => void;
-  /** Funda a Nova Dinastia (§6): credita coroas, concede o Selo na estreia, reseta a run. */
+  /** Funda a Nova Dinastia (§6): credita coroas, concede o Selo (Lendário #0) na estreia, reseta a run. */
   novaDinastia: () => void;
   /** Avança a produção passiva por `dtSegundos` de tempo real. */
   tick: (dtSegundos: number) => void;
@@ -174,7 +246,10 @@ export const useGame = create<GameState>((set, get) => ({
   gastos: 0,
   gatos: gatosZerados(),
   habilidades: [],
-  seloImperial: false,
+  lendarios: {},
+  ofertaDraft: [],
+  rerollsFeitos: 0,
+  eraMaxAtingida: 1,
   dinastias: 0,
   runInicioTs: Date.now(),
   ganhoOffline: null,
@@ -188,25 +263,28 @@ export const useGame = create<GameState>((set, get) => ({
     if (!b) return;
     if (!predioDesbloqueado(b, s.gatos)) return; // cadeia de compra: prédio ainda oculto (§4.6.9)
     const possui = s.gatos[buildingId] ?? 0;
-    const custo = custoDeVariosGatos(b.custoBasePorGato, possui, quantidade);
+    const custo = custoComReducao(b.custoBasePorGato, possui, quantidade, s.lendarios);
     if (s.peixes < custo) return;
 
     const novosGatos = { ...s.gatos, [buildingId]: possui + quantidade };
     const patch: Partial<GameState> = {
       peixes: s.peixes - custo,
-      gastos: s.gastos + custo, // gasto conta pro prestígio (§6, ADR-0003)
+      gastos: s.gastos + custo, // gasto conta pro prestígio (§6)
       gatos: novosGatos,
     };
 
     // Construir a Obra (a 1ª compra dela) VIRA a Era (§4.6.9): revela o 1º prédio da Era seguinte
-    // via cadeia (automático), troca o mundo (Era derivada de gatos) e dispara fanfarra + lump.
+    // via cadeia, troca o mundo (Era derivada de gatos) e dispara fanfarra + lump.
     if (b.ehObra && possui === 0) {
       const novaEra = eraDeObras(obrasConstruidas(novosGatos));
       if (novaEra <= ERAS.length) {
         // A última Obra do slice "apontaria" para uma Era inexistente — aí não há virada a comemorar.
         patch.eraFanfarra = eraPorNivel(novaEra);
-        patch.peixes = (patch.peixes as number) + lumpDaEra(prodPorSegundo(s), LUMP_SEGUNDOS, LUMP_PISO);
+        const lump = lumpDaEra(prodPorSegundo(s), LUMP_SEGUNDOS, LUMP_PISO) * multsDaCorte(s.lendarios).lump;
+        patch.peixes = (patch.peixes as number) + lump;
       }
+      // Desbloqueio de tier de Lendário é PERMANENTE: registra a Era mais alta já tocada.
+      if (novaEra > s.eraMaxAtingida) patch.eraMaxAtingida = novaEra;
     }
     set(patch);
   },
@@ -222,9 +300,46 @@ export const useGame = create<GameState>((set, get) => ({
     if (s.peixes < a.custo) return; // sem peixes
     set({
       peixes: s.peixes - a.custo,
-      gastos: s.gastos + a.custo, // gasto conta pro prestígio (§6, ADR-0003)
+      gastos: s.gastos + a.custo, // gasto conta pro prestígio (§6)
       habilidades: [...s.habilidades, abilityId],
     });
+  },
+
+  recrutarLendario: (id) => {
+    const s = get();
+    if (!s.ofertaDraft.includes(id)) return; // só recruta do que está ofertado
+    const def = lendarioPorId(id);
+    if (!def || (s.lendarios[id] ?? 0) > 0) return; // desconhecido ou já recrutado
+    const custo = custoRecrutar(nRecrutados(s.lendarios), RECRUTAR_BASE, RECRUTAR_GROWTH);
+    if (s.coroas < custo) return;
+    const lendarios = { ...s.lendarios, [id]: 1 };
+    set({
+      coroas: s.coroas - custo,
+      lendarios,
+      ofertaDraft: gerarOferta(lendarios, s.eraMaxAtingida), // nova oferta do pool restante
+      rerollsFeitos: 0, // recrutar zera o custo de reroll
+    });
+  },
+
+  rerollOferta: () => {
+    const s = get();
+    if (poolDisponivel(s.lendarios, s.eraMaxAtingida).length === 0) return; // nada pra rerolar
+    const custo = custoReroll(s.rerollsFeitos, REROLL_BASE, REROLL_GROWTH);
+    if (s.coroas < custo) return;
+    set({
+      coroas: s.coroas - custo,
+      ofertaDraft: gerarOferta(s.lendarios, s.eraMaxAtingida),
+      rerollsFeitos: s.rerollsFeitos + 1,
+    });
+  },
+
+  subirNivelLendario: (id) => {
+    const s = get();
+    const nivel = s.lendarios[id] ?? 0;
+    if (nivel < 1) return; // precisa estar recrutado
+    const custo = custoSubirNivel(nivel, NIVEL_BASE, NIVEL_GROWTH);
+    if (s.coroas < custo) return;
+    set({ coroas: s.coroas - custo, lendarios: { ...s.lendarios, [id]: nivel + 1 } });
   },
 
   clicar: () => {
@@ -235,21 +350,28 @@ export const useGame = create<GameState>((set, get) => ({
 
   novaDinastia: () => {
     const s = get();
-    // A coroa escala pelos peixes GASTOS na run (§6, ADR-0003) — não mais pelo `lifetime`.
+    // A coroa escala pelos peixes GASTOS na run (§6, cbrt) — vira moeda gastável (ADR-0004).
     const coroasGanhas = coroasGanhasNaRun(s.gastos);
     if (coroasGanhas < 1) return; // guarda: o botão só aparece com ≥1 coroa, mas a ação também protege
 
-    // Reset: gatos zerados ⇒ a Era volta ao Beco e os prédios re-travam (ambos derivam de gatos).
+    // Selo Imperial = Lendário #0: concedido (nível 1) na 1ª Dinastia; idempotente depois.
+    const lendarios = { ...s.lendarios };
+    if ((lendarios[SELO_LENDARIO_ID] ?? 0) < 1) lendarios[SELO_LENDARIO_ID] = 1;
+
+    // Reset da RUN: gatos zerados ⇒ a Era volta ao Beco e os prédios re-travam (derivam de gatos).
+    // Permanentes: coroas, lendarios, eraMaxAtingida, dinastias.
     set({
       peixes: 0,
       lifetime: 0,
       gastos: 0,
       gatos: gatosZerados(),
       habilidades: [],
-      coroas: s.coroas + coroasGanhas, // coroa persiste como contagem (§6)
-      seloImperial: true, // concedido na 1ª Dinastia; idempotente depois (o ×1,5 nunca empilha)
-      dinastias: s.dinastias + 1, // contagem permanente de fundações
-      runInicioTs: Date.now(), // re-arma o relógio da run (§12)
+      coroas: s.coroas + coroasGanhas,
+      lendarios,
+      dinastias: s.dinastias + 1,
+      runInicioTs: Date.now(),
+      ofertaDraft: gerarOferta(lendarios, s.eraMaxAtingida),
+      rerollsFeitos: 0,
       ganhoOffline: null,
       eraFanfarra: null,
     });
@@ -274,6 +396,12 @@ export const useGame = create<GameState>((set, get) => ({
       return;
     }
 
+    const lendarios = normalizarLendarios(save.lendarios);
+    const eraMaxAtingida =
+      typeof save.eraMaxAtingida === "number" && save.eraMaxAtingida >= 1
+        ? Math.floor(save.eraMaxAtingida)
+        : 1;
+
     const base = {
       peixes: save.peixes,
       lifetime: save.lifetime,
@@ -281,25 +409,33 @@ export const useGame = create<GameState>((set, get) => ({
       gastos: save.gastos,
       gatos: normalizarGatos(save.gatos),
       habilidades: normalizarHabilidades(save.habilidades),
-      // O Selo entra no `base` porque o cálculo offline usa `prodPorSegundo(base)`, que já o inclui
-      // no multiplicador global (§3.6: produção ×1,5 rende ausente, ao contrário da Passiva de Clique).
-      seloImperial: save.seloImperial === true,
+      // Os Lendários entram no `base` porque o offline usa `prodPorSegundo(base)`, que aplica o
+      // multiplicador de produção da Corte (o Selo #0 rende ausente, como qualquer produção).
+      lendarios,
     };
 
-    // A produção que alimenta o offline precisa ser a EFETIVA (com coroas já embutidas),
-    // pois `domain/offline` não reaplica coroas. `prodPorSegundo` entrega exatamente isso.
-    const ganho = calcularGanhoOffline(prodPorSegundo(base), Date.now() - save.ts);
+    // Produção EFETIVA (com o mult dos Lendários embutido). O ganho offline ainda ganha o mult de
+    // offline da Corte (ex.: Gato de Schrödinger) por fora.
+    const rate = prodPorSegundo(base);
+    const ganho = calcularGanhoOffline(rate, Date.now() - save.ts);
+    const ganhoPeixes = ganho.peixes * multsDaCorte(lendarios).offline;
+    const ganhoFinal = ganho.peixes > 0 ? { ...ganho, peixes: ganhoPeixes } : ganho;
 
-    // Nada de Era na hidratação: a Era deriva de `gatos` (já carregado) — construir Obra é ato ao
-    // vivo, nunca offline (§4.6.9). O offline só credita peixes+lifetime (vitrine), não gastos.
+    // Nada de Era na hidratação: a Era deriva de `gatos` (já carregado). Offline só credita
+    // peixes+lifetime (vitrine), não gastos.
     set({
       ...base,
-      peixes: base.peixes + ganho.peixes,
-      lifetime: base.lifetime + ganho.peixes,
+      peixes: base.peixes + ganhoFinal.peixes,
+      lifetime: base.lifetime + ganhoFinal.peixes,
+      eraMaxAtingida,
+      ofertaDraft:
+        save.ofertaDraft && save.ofertaDraft.length > 0
+          ? save.ofertaDraft
+          : gerarOferta(lendarios, eraMaxAtingida),
+      rerollsFeitos: typeof save.rerollsFeitos === "number" ? Math.max(0, Math.floor(save.rerollsFeitos)) : 0,
       dinastias: save.dinastias ?? 0,
-      // Save antigo sem `runInicioTs` → carimba agora (a run já corria, mas não sabemos desde quando).
       runInicioTs: save.runInicioTs ?? Date.now(),
-      ganhoOffline: ganho.peixes > 0 ? ganho : null,
+      ganhoOffline: ganhoFinal.peixes > 0 ? ganhoFinal : null,
       hidratado: true,
     });
   },
@@ -313,7 +449,10 @@ export const useGame = create<GameState>((set, get) => ({
       gastos: s.gastos,
       gatos: s.gatos,
       habilidades: s.habilidades,
-      seloImperial: s.seloImperial,
+      lendarios: s.lendarios,
+      ofertaDraft: s.ofertaDraft,
+      rerollsFeitos: s.rerollsFeitos,
+      eraMaxAtingida: s.eraMaxAtingida,
       dinastias: s.dinastias,
       runInicioTs: s.runInicioTs,
     });
@@ -328,10 +467,6 @@ export const useGame = create<GameState>((set, get) => ({
 /**
  * Cadeia de compra (§4.6.9): um prédio está desbloqueado quando o **anterior na escada** já tem ≥1
  * gato (comprar o 1º gato de um prédio revela o próximo). O 1º prédio (Caixa) está sempre revelado.
- *
- * Não precisa de flag persistido: `gatos` (já salvo) É o registro dos atos concretos que dirigem a
- * progressão (ADR-0003). Como não se vende gato, o desbloqueio nunca regride dentro da run. O gate
- * real é o **custo crescente** do 1º gato (auto-pacing), não um limiar de `lifetime`.
  */
 export function predioDesbloqueado(b: Building, gatos: Record<string, number>): boolean {
   const idx = BUILDINGS.findIndex((x) => x.id === b.id);
@@ -347,35 +482,46 @@ export function obrasConstruidas(gatos: Record<string, number>): number {
 
 /**
  * Nível da Era atual da run (§4.6.9): 1 (Beco) + nº de Obras construídas. Derivado de `gatos` — sem
- * estado separado. Pode exceder o total de Eras do slice ao construir a última Obra; `eraPorNivel`
- * clampa na exibição.
+ * estado separado. Pode exceder o total de Eras do slice; `eraPorNivel` clampa na exibição.
  */
 export function eraAtual(gatos: Record<string, number>): number {
   return eraDeObras(obrasConstruidas(gatos));
 }
 
-type EstadoProducao = Pick<GameState, "gatos" | "coroas" | "habilidades" | "seloImperial">;
+type EstadoProducao = Pick<GameState, "gatos" | "habilidades" | "lendarios">;
 
 export function prodPorSegundo(s: EstadoProducao): number {
-  // O Selo Imperial é a única Habilidade global do slice (§3.6): fator ×1,5 em `habilidades_globais`
-  // (§3.7), multiplicativo por fora do colchete das coroas. `domain/production` recebe o fator opaco.
-  const habilidadesGlobaisMult = s.seloImperial ? SELO_IMPERIAL_MULT : 1;
-  return producaoPorSegundo(produtores(s.gatos, s.habilidades), s.coroas, habilidadesGlobaisMult);
+  // ADR-0004: o multiplicador global de produção vem dos Lendários (que já incluem o Selo #0).
+  const mult = multsDaCorte(s.lendarios).producao;
+  return producaoPorSegundo(produtores(s.gatos, s.habilidades), mult);
 }
 
 export function poderDeClique(s: EstadoProducao): number {
   const clique = efeitosCliqueGlobais(s.habilidades);
-  return peixesPorClique(prodPorSegundo(s), multiplicadorClique(clique), bonusColheita(clique));
+  const lendClique = multsDaCorte(s.lendarios).clique; // Lendários de clique multiplicam por fora
+  return peixesPorClique(prodPorSegundo(s), multiplicadorClique(clique) * lendClique, bonusColheita(clique));
+}
+
+/** Custo de comprar gatos já com a redução dos Lendários de custo (`custoReducao`) aplicada. */
+function custoComReducao(
+  custoBase: number,
+  possui: number,
+  quantidade: number,
+  lendarios: Record<string, number>,
+): number {
+  const bruto = custoDeVariosGatos(custoBase, possui, quantidade);
+  return Math.ceil(bruto * multsDaCorte(lendarios).custoGatos);
 }
 
 export function custoDaCompra(
   gatos: Record<string, number>,
+  lendarios: Record<string, number>,
   buildingId: string,
   quantidade: number,
 ): number {
   const b = BUILDINGS.find((x) => x.id === buildingId);
   if (!b) return Number.POSITIVE_INFINITY;
-  return custoDeVariosGatos(b.custoBasePorGato, gatos[buildingId] ?? 0, quantidade);
+  return custoComReducao(b.custoBasePorGato, gatos[buildingId] ?? 0, quantidade, lendarios);
 }
 
 /**
@@ -410,4 +556,59 @@ export function habilidadesDoPredio(
     desbloqueada: habilidadeDesbloqueada(qtd, a.marco),
     comprada: habilidades.includes(a.id),
   }));
+}
+
+// --- Seletor da Corte Lendária (tudo que o painel de UI precisa) ---
+
+export interface LendarioRecrutadoUI {
+  def: LendarioDef;
+  nivel: number;
+  custoProxNivel: number;
+  podeSubir: boolean;
+}
+export interface OfertaUI {
+  def: LendarioDef;
+  custoRecrutar: number;
+  podeRecrutar: boolean;
+}
+export interface CorteUI {
+  coroas: number;
+  recrutados: LendarioRecrutadoUI[];
+  oferta: OfertaUI[];
+  custoReroll: number;
+  podeReroll: boolean;
+  poolVazio: boolean;
+}
+
+type EstadoCorte = Pick<
+  GameState,
+  "coroas" | "lendarios" | "ofertaDraft" | "rerollsFeitos" | "eraMaxAtingida"
+>;
+
+/** Resolve a Corte pra o painel: recrutados (com custo do próximo nível) + oferta + reroll. */
+export function corteUI(s: EstadoCorte): CorteUI {
+  const recrutados: LendarioRecrutadoUI[] = LEGENDARIES.filter((l) => (s.lendarios[l.id] ?? 0) > 0)
+    .map((def) => {
+      const nivel = s.lendarios[def.id] ?? 0;
+      const custoProxNivel = custoSubirNivel(nivel, NIVEL_BASE, NIVEL_GROWTH);
+      return { def, nivel, custoProxNivel, podeSubir: s.coroas >= custoProxNivel };
+    });
+
+  const custoRec = custoRecrutar(nRecrutados(s.lendarios), RECRUTAR_BASE, RECRUTAR_GROWTH);
+  const oferta: OfertaUI[] = s.ofertaDraft
+    .map((id) => lendarioPorId(id))
+    .filter((d): d is LendarioDef => d !== undefined && (s.lendarios[d.id] ?? 0) === 0)
+    .map((def) => ({ def, custoRecrutar: custoRec, podeRecrutar: s.coroas >= custoRec }));
+
+  const poolVazio = poolDisponivel(s.lendarios, s.eraMaxAtingida).length === 0;
+  const custoRr = custoReroll(s.rerollsFeitos, REROLL_BASE, REROLL_GROWTH);
+
+  return {
+    coroas: s.coroas,
+    recrutados,
+    oferta,
+    custoReroll: custoRr,
+    podeReroll: !poolVazio && s.coroas >= custoRr,
+    poolVazio,
+  };
 }

@@ -414,6 +414,53 @@ button:focus-visible { outline: 3px solid var(--turq-esc); outline-offset: 2px; 
   50% { box-shadow: 0 3px 0 var(--dourado-esc), 0 0 16px rgba(255, 201, 60, 0.75); }
 }
 
+/* ---------- Corte Lendária (§4.6.7, ADR-0004) ---------- */
+.corte-btn {
+  display: flex; align-items: center; gap: 8px;
+  background: linear-gradient(180deg, #b98cff, #7b4fe0);
+  border: 2px solid var(--ink); border-radius: 14px;
+  padding: 5px 13px 5px 8px; cursor: pointer; color: #fff;
+  box-shadow: 0 3px 0 #55329e;
+}
+.corte-btn:active { transform: translateY(3px); box-shadow: 0 0 0 #55329e; }
+.corte-btn-ico { font-size: 1.25rem; filter: drop-shadow(0 1px 1px rgba(36, 28, 46, 0.4)); }
+.corte-btn-txt { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.05; }
+.corte-btn-txt b { font-family: var(--display); font-weight: 700; font-size: 0.9rem; }
+.corte-btn-txt span { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.9; }
+
+.modal-corte { max-width: 460px; text-align: left; max-height: 86vh; overflow-y: auto; }
+.modal-corte h2 { text-align: center; }
+.corte-coroas { text-align: center; font-family: var(--display); font-size: 1.1rem; color: var(--dourado-esc) !important; margin: 0 0 6px; }
+.corte-sec { margin-top: 14px; }
+.corte-h { font-family: var(--display); font-size: 0.9rem; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+.corte-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.corte-card {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--papel); border: 2px solid var(--ink); border-radius: 12px;
+  padding: 8px 10px; box-shadow: 0 2px 0 var(--papel-3);
+}
+.corte-oferta { background: linear-gradient(180deg, #f3ecff, var(--papel)); }
+.corte-emoji { font-size: 1.7rem; flex-shrink: 0; }
+.corte-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.corte-info b { font-family: var(--display); font-weight: 700; font-size: 0.92rem; }
+.corte-nv { font-family: var(--body); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em; color: #7b4fe0; }
+.corte-desc { font-size: 0.74rem; color: var(--ink-soft); line-height: 1.25; }
+.corte-papel { font-size: 0.72rem; color: var(--turq-esc); font-weight: 600; }
+.corte-btn-acao {
+  flex-shrink: 0; font-family: var(--display); font-weight: 700; font-size: 0.82rem;
+  background: var(--dourado); color: var(--ink); border: 2px solid var(--ink);
+  border-radius: 10px; padding: 7px 11px; cursor: pointer; box-shadow: 0 3px 0 var(--dourado-esc);
+}
+.corte-btn-acao:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 var(--dourado-esc); }
+.corte-btn-acao:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.4); }
+.corte-reroll {
+  margin-top: 10px; width: 100%; font-family: var(--display); font-weight: 600; font-size: 0.82rem;
+  background: var(--papel-2); color: var(--ink); border: 2px dashed var(--ink);
+  border-radius: 10px; padding: 8px; cursor: pointer;
+}
+.corte-reroll:disabled { opacity: 0.45; cursor: not-allowed; }
+.corte-vazio { font-size: 0.85rem; color: var(--ink-soft); text-align: center; padding: 8px; }
+
 /* Modal de confirmação obrigatório (§6): perde/mantém + coroas que entram + multiplicador antes→depois. */
 .modal-dinastia { max-width: 420px; }
 .dinastia-cols { display: flex; gap: 12px; margin: 14px 0; text-align: left; }

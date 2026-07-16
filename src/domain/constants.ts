@@ -21,15 +21,9 @@ export const OFFLINE_RATE = 0.5;
 /** Teto de horas de produção offline acumulada. */
 export const OFFLINE_CAP_H = 8;
 
-/** Escala da fórmula de coroas do prestígio. */
-export const PRESTIGE_DIVISOR = 1e6;
-
-/** Bônus de produção global por coroa (+2%). */
-export const CROWN_BONUS = 0.02;
-
 /**
- * Multiplicador de produção global do Selo Imperial (§3.6, não §3.1) — concedido na 1ª Nova Dinastia,
- * permanente. Entra como fator multiplicativo em `habilidades_globais` (§3.7), fora do colchete das
- * coroas. Balanceamento (§8), não `[TRAVADO]`.
+ * Escala da fórmula de coroas do prestígio: `coroas = floor(cbrt(gastos / DIVISOR))` (§6, ADR-0004).
+ * Baixado de 1e6→1e4 na v0.7: com a raiz cúbica e a curva suave, 1e4 dá ~3 coroas numa run 1 curta
+ * (o bastante pra começar a Corte Lendária). Balanceamento (§8), sintoniza o nº de dinastias.
  */
-export const SELO_IMPERIAL_MULT = 1.5;
+export const PRESTIGE_DIVISOR = 1e4;

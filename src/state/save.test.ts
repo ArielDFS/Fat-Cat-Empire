@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { carregarSave, gravarSave, limparSave, SAVE_VERSION } from "./save";
+import { SELO_LENDARIO_ID } from "../data/legendaries";
 
 const KEY = "fat-cat-empire:save";
 
@@ -21,8 +22,8 @@ beforeEach(() => {
   store = instalarLocalStorageStub();
 });
 
-describe("save v2 (motor v0.6)", () => {
-  it("round-trip: grava e carrega preservando gastos e campos", () => {
+describe("save v3 (Corte Lendária)", () => {
+  it("round-trip: grava e carrega preservando gastos, coroas e Lendários", () => {
     gravarSave({
       peixes: 500,
       lifetime: 1_234,
@@ -30,7 +31,10 @@ describe("save v2 (motor v0.6)", () => {
       gastos: 9_000,
       gatos: { caixa_papelao: 12, prefeitura_vira_lata: 1 },
       habilidades: ["caixa_papelao:m10"],
-      seloImperial: true,
+      lendarios: { [SELO_LENDARIO_ID]: 1, barao_bigode: 3 },
+      ofertaDraft: ["garra_ouro"],
+      rerollsFeitos: 2,
+      eraMaxAtingida: 4,
       dinastias: 2,
       runInicioTs: 111,
     });
@@ -39,12 +43,13 @@ describe("save v2 (motor v0.6)", () => {
     expect(s.gastos).toBe(9_000);
     expect(s.coroas).toBe(3);
     expect(s.gatos.prefeitura_vira_lata).toBe(1);
-    expect(s.seloImperial).toBe(true);
+    expect(s.lendarios).toEqual({ [SELO_LENDARIO_ID]: 1, barao_bigode: 3 });
+    expect(s.eraMaxAtingida).toBe(4);
     expect(s.dinastias).toBe(2);
   });
 
   it("gastos ausente/ inválido → 0 (defensivo)", () => {
-    store.set(KEY, JSON.stringify({ versao: 2, ts: 1, peixes: 0, lifetime: 0, coroas: 0, gatos: {} }));
+    store.set(KEY, JSON.stringify({ versao: 3, ts: 1, peixes: 0, lifetime: 0, coroas: 0, gatos: {} }));
     expect(carregarSave()!.gastos).toBe(0);
   });
 
@@ -54,9 +59,9 @@ describe("save v2 (motor v0.6)", () => {
   });
 });
 
-describe("migração v1 → v2 (ADR-0003)", () => {
-  it("semeia gastos ≈ lifetime e descarta eraMaisAlta, mantendo recursos e gatos", () => {
-    // Um save v1 típico (modelo lifetime): tinha eraMaisAlta, não tinha gastos.
+describe("migração em cadeia v1 → v2 → v3 (ADR-0003 + ADR-0004)", () => {
+  it("v1: semeia gastos ≈ lifetime, descarta eraMaisAlta e converte o Selo no Lendário #0", () => {
+    // Um save v1 típico (modelo lifetime): tinha eraMaisAlta e seloImperial, não tinha gastos.
     store.set(
       KEY,
       JSON.stringify({
@@ -74,19 +79,24 @@ describe("migração v1 → v2 (ADR-0003)", () => {
       }),
     );
     const s = carregarSave()!;
-    expect(s.versao).toBe(SAVE_VERSION);
+    expect(s.versao).toBe(SAVE_VERSION); // 3
     expect(s.gastos).toBe(4_000_000); // gastos ≈ lifetime (preserva o progresso de prestígio)
     expect((s as unknown as Record<string, unknown>).eraMaisAlta).toBeUndefined(); // descartado
+    expect(s.lendarios).toEqual({ [SELO_LENDARIO_ID]: 1 }); // Selo → Lendário #0
     expect(s.peixes).toBe(250); // recursos preservados
     expect(s.coroas).toBe(2);
-    expect(s.gatos.caixa_papelao).toBe(40);
-    expect(s.seloImperial).toBe(true);
     expect(s.dinastias).toBe(1);
   });
 
-  it("v1 sem lifetime válido → gastos 0", () => {
-    store.set(KEY, JSON.stringify({ versao: 1, ts: 1, peixes: 0, lifetime: 0, coroas: 0, gatos: {} }));
-    expect(carregarSave()!.gastos).toBe(0);
+  it("v2 → v3: sem Selo, os Lendários começam vazios", () => {
+    store.set(
+      KEY,
+      JSON.stringify({ versao: 2, ts: 1, peixes: 0, lifetime: 0, coroas: 5, gastos: 100, gatos: {} }),
+    );
+    const s = carregarSave()!;
+    expect(s.versao).toBe(SAVE_VERSION);
+    expect(s.coroas).toBe(5);
+    expect(s.lendarios).toEqual({});
   });
 });
 

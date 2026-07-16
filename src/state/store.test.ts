@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useGame, prodPorSegundo, poderDeClique, habilidadesDoPredio, eraAtual } from "./store";
+import { useGame, prodPorSegundo, poderDeClique, habilidadesDoPredio, eraAtual, corteUI } from "./store";
 import { abilityPorId } from "../data/abilities";
 import { BUILDINGS } from "../data/buildings";
+import { SELO_LENDARIO_ID } from "../data/legendaries";
 import { LUMP_SEGUNDOS, LUMP_PISO } from "../data/eras";
 import { lumpDaEra } from "../domain/era";
-import { PRESTIGE_DIVISOR, SELO_IMPERIAL_MULT } from "../domain/constants";
+import { PRESTIGE_DIVISOR } from "../domain/constants";
 
 const CLIQUE10 = abilityPorId("caixa_papelao:m10")!; // C1 clique ×1,5, marco 10
 const PROD25 = abilityPorId("caixa_papelao:m25")!; //   P1 produção ×2, marco 25
@@ -18,7 +19,10 @@ function seed(patch: Partial<ReturnType<typeof useGame.getState>>) {
     coroas: 0,
     gatos: {},
     habilidades: [],
-    seloImperial: false,
+    lendarios: {},
+    ofertaDraft: [],
+    rerollsFeitos: 0,
+    eraMaxAtingida: 1,
     dinastias: 0,
     runInicioTs: Date.now(),
     ganhoOffline: null,
@@ -140,9 +144,9 @@ describe("virada de Era ao construir a Obra (§4.6.9)", () => {
 });
 
 describe("novaDinastia — prestígio (§6)", () => {
-  it("funda com ≥1 coroa: credita coroas, concede o Selo e zera a run", () => {
+  it("funda com ≥1 coroa: credita coroas, concede o Selo (#0) e zera a run", () => {
     seed({
-      gastos: 4 * PRESTIGE_DIVISOR, // sqrt(4) = 2 coroas
+      gastos: 8 * PRESTIGE_DIVISOR, // cbrt(8) = 2 coroas
       peixes: 9_999,
       lifetime: 9_999,
       coroas: 1,
@@ -152,7 +156,7 @@ describe("novaDinastia — prestígio (§6)", () => {
     useGame.getState().novaDinastia();
     const s = useGame.getState();
     expect(s.coroas).toBe(3); // 1 antiga + 2 ganhas
-    expect(s.seloImperial).toBe(true);
+    expect(s.lendarios[SELO_LENDARIO_ID]).toBe(1); // Selo = Lendário #0, concedido nível 1
     expect(s.peixes).toBe(0);
     expect(s.lifetime).toBe(0);
     expect(s.gastos).toBe(0);
@@ -175,24 +179,27 @@ describe("novaDinastia — prestígio (§6)", () => {
     expect(s.coroas).toBe(0);
     expect(s.gastos).toBe(PRESTIGE_DIVISOR - 1);
     expect(s.gatos.caixa_papelao).toBe(10);
-    expect(s.seloImperial).toBe(false);
+    expect(s.lendarios[SELO_LENDARIO_ID]).toBeUndefined(); // Selo não concedido sem fundar
   });
 
-  it("o Selo aplica ×1,5 na produção global e sobrevive à Dinastia", () => {
+  it("o Selo (#0) aplica ×1,5 na produção e sobrevive à Dinastia", () => {
     seed({ gatos: { caixa_papelao: 100 } });
     const semSelo = prodPorSegundo(useGame.getState());
-    seed({ gatos: { caixa_papelao: 100 }, seloImperial: true });
-    expect(prodPorSegundo(useGame.getState())).toBeCloseTo(semSelo * SELO_IMPERIAL_MULT);
+    seed({ gatos: { caixa_papelao: 100 }, lendarios: { [SELO_LENDARIO_ID]: 1 } });
+    expect(prodPorSegundo(useGame.getState())).toBeCloseTo(semSelo * 1.5);
   });
 
-  it("o ×1,5 do Selo NÃO empilha entre Dinastias: fundar de novo só soma coroas", () => {
-    seed({ gastos: PRESTIGE_DIVISOR, coroas: 0, seloImperial: true, gatos: { caixa_papelao: 10 } });
-    const antes = useGame.getState().seloImperial;
+  it("o Selo NÃO empilha entre Dinastias: fundar de novo mantém o nível 1", () => {
+    seed({
+      gastos: PRESTIGE_DIVISOR,
+      coroas: 0,
+      lendarios: { [SELO_LENDARIO_ID]: 1 },
+      gatos: { caixa_papelao: 10 },
+    });
     useGame.getState().novaDinastia();
     const s = useGame.getState();
-    expect(antes).toBe(true);
-    expect(s.seloImperial).toBe(true); // continua true, não vira "2 selos"
-    expect(s.coroas).toBe(1); // quem cresce por Dinastia é a coroa
+    expect(s.lendarios[SELO_LENDARIO_ID]).toBe(1); // continua nível 1, não vira 2
+    expect(s.coroas).toBe(1); // quem cresce por Dinastia é a coroa (pra gastar na Corte)
   });
 
   it("re-arma o relógio da run ao fundar (base da conquista §12)", () => {
@@ -212,5 +219,62 @@ describe("habilidadesDoPredio (seletor de UI)", () => {
     expect(m10.comprada).toBe(true);
     expect(m50.desbloqueada).toBe(false); // 25 < 50
     expect(m50.comprada).toBe(false);
+  });
+});
+
+describe("Corte Lendária (§4.6.7)", () => {
+  // barao_bigode é tier 1: aparece no draft já na Era 1.
+  const OFERTA1 = ["barao_bigode", "garra_ouro", "dona_sardinha"];
+
+  it("recruta um Lendário da oferta: debita Coroas e registra no nível 1", () => {
+    seed({ coroas: 100, ofertaDraft: OFERTA1, eraMaxAtingida: 1 });
+    useGame.getState().recrutarLendario("barao_bigode");
+    const s = useGame.getState();
+    expect(s.lendarios.barao_bigode).toBe(1);
+    expect(s.coroas).toBeLessThan(100); // pagou
+  });
+
+  it("não recruta o que não está na oferta", () => {
+    seed({ coroas: 100, ofertaDraft: OFERTA1 });
+    useGame.getState().recrutarLendario("imperatriz_nebulosa"); // não ofertado (e tier 5)
+    expect(useGame.getState().lendarios.imperatriz_nebulosa).toBeUndefined();
+  });
+
+  it("não recruta sem Coroas suficientes", () => {
+    seed({ coroas: 0, ofertaDraft: OFERTA1 });
+    useGame.getState().recrutarLendario("barao_bigode");
+    expect(useGame.getState().lendarios.barao_bigode).toBeUndefined();
+  });
+
+  it("recrutar buffa a produção (barão = ×1,15)", () => {
+    seed({ coroas: 100, ofertaDraft: OFERTA1, gatos: { caixa_papelao: 100 } });
+    const antes = prodPorSegundo(useGame.getState());
+    useGame.getState().recrutarLendario("barao_bigode");
+    expect(prodPorSegundo(useGame.getState())).toBeCloseTo(antes * 1.15);
+  });
+
+  it("subir nível exige estar recrutado e composta o buff (×1,15^2)", () => {
+    seed({ coroas: 1000, lendarios: { barao_bigode: 1 }, gatos: { caixa_papelao: 100 } });
+    const nivel1 = prodPorSegundo(useGame.getState());
+    useGame.getState().subirNivelLendario("barao_bigode");
+    expect(useGame.getState().lendarios.barao_bigode).toBe(2);
+    expect(prodPorSegundo(useGame.getState())).toBeCloseTo((nivel1 / 1.15) * 1.15 ** 2);
+  });
+
+  it("reroll troca a oferta e cobra Coroas (custo sobe a cada reroll)", () => {
+    seed({ coroas: 100, ofertaDraft: OFERTA1, rerollsFeitos: 0, eraMaxAtingida: 1 });
+    useGame.getState().rerollOferta();
+    const s = useGame.getState();
+    expect(s.rerollsFeitos).toBe(1);
+    expect(s.coroas).toBeLessThan(100);
+  });
+
+  it("corteUI expõe recrutados e oferta com custos resolvidos", () => {
+    seed({ coroas: 50, lendarios: { [SELO_LENDARIO_ID]: 1 }, ofertaDraft: OFERTA1, eraMaxAtingida: 1 });
+    const ui = corteUI(useGame.getState());
+    expect(ui.coroas).toBe(50);
+    expect(ui.recrutados.some((r) => r.def.id === SELO_LENDARIO_ID)).toBe(true);
+    expect(ui.oferta.length).toBe(3);
+    expect(ui.oferta[0]!.custoRecrutar).toBeGreaterThan(0);
   });
 });

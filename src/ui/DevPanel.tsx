@@ -97,7 +97,10 @@ function zerarRun() {
     coroas: 0,
     gatos: gatosZerados(),
     habilidades: [],
-    seloImperial: false,
+    lendarios: {},
+    ofertaDraft: [],
+    rerollsFeitos: 0,
+    eraMaxAtingida: 1,
     dinastias: 0,
     runInicioTs: Date.now(),
     ganhoOffline: null,
@@ -152,9 +155,10 @@ export function DevPanel() {
   const gastos = useGame((s) => s.gastos);
   const coroas = useGame((s) => s.coroas);
   const gatos = useGame((s) => s.gatos);
-  const seloImperial = useGame((s) => s.seloImperial);
+  const lendarios = useGame((s) => s.lendarios);
   const dinastias = useGame((s) => s.dinastias);
   const eraNivel = eraAtual(gatos);
+  const nLendarios = Object.keys(lendarios).length;
 
   if (!aberto) {
     return (
@@ -223,8 +227,7 @@ export function DevPanel() {
         <br />gastos {gastos.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
         <br />lifetime {lifetime.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} (vitrine)
         <br />Era {eraNivel} — {eraPorNivel(eraNivel).nome}
-        {seloImperial ? " · 🏅 Selo" : ""}
-        <br />Dinastias {dinastias}
+        <br />Dinastias {dinastias} · Lendários {nLendarios}
       </div>
     </div>
   );
