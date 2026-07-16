@@ -80,6 +80,8 @@ _Avoid_: passiva de idle, upgrade de produção.
 Habilidade passiva que aumenta o **poder de clique** (efeito **global**, apesar de morar num Prédio).
 **Invisível offline** — não rende ausente —, o que a mantém no eixo ativo sem quebrar "idle rende
 melhor ausente". É um dos motores da **Build ativa**. Ver [ADR-0002](docs/adr/0002-passiva-de-clique.md).
+O piso de bootstrap é aplicado à base antes do multiplicador: uma Passiva C1 de ×1,5 continua
+aparecendo como 1,5 Peixe por clique mesmo quando a produção ainda é baixa.
 _Avoid_: buff de clique, upgrade de clique.
 
 **Habilidade global**:

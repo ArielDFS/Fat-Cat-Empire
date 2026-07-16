@@ -31,7 +31,8 @@ para dentro das passivas dá variedade às lojas dos prédios **e** torna a deci
 - **`CONTEXT.md` reescrito:** "Habilidade passiva" não é mais sinônimo de Build idle; entram os
   termos **Passiva de Produção** e **Passiva de Clique**.
 - **§3.4 e §3.5 serão reescritos** (changelog v0.4). A fórmula do clique ganha um multiplicador de
-  passivas de clique: `peixes_por_clique = max(1, prod/s × CLICK_FACTOR × mult_clique)`. O clique
+  passivas de clique: `peixes_por_clique = max(1, prod/s × CLICK_FACTOR) × mult_clique`. O piso
+  protege a base sem apagar o multiplicador C1 no bootstrap. O clique
   continua sendo **sempre uma fração da produção** (nunca "+N fixo"), o que o impede de ficar obsoleto.
 - **Não existe build de clique puro.** Como clique = %(produção), a build ativa é **lastreada em
   produção**: compra-se produção pela base, empilham-se Passivas de Clique + burst por cima, e joga-se
