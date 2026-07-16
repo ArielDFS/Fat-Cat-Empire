@@ -21,6 +21,7 @@ import { eraPorNivel } from "../data/eras";
 import { podeFundarNovaDinastia, coroasGanhasNaRun, resumoNovaDinastia } from "../domain/prestige";
 import { iniciarAutoSave } from "../state/save";
 import { artOf } from "./buildingArt";
+import { artOfLendario } from "./legendaryArt";
 import { skyDaEra } from "./eraArt";
 import { DevPanel } from "./DevPanel";
 import fishImg from "../assets/fish_click.png";
@@ -368,7 +369,11 @@ export function App() {
                 <ul className="corte-lista">
                   {corte.recrutados.map((r) => (
                     <li key={r.def.id} className="corte-card">
-                      <span className="corte-emoji" aria-hidden="true">{r.def.emoji}</span>
+                      {artOfLendario(r.def.id) ? (
+                        <img className="corte-art" src={artOfLendario(r.def.id)} alt={r.def.nome} />
+                      ) : (
+                        <span className="corte-emoji" aria-hidden="true">{r.def.emoji}</span>
+                      )}
                       <span className="corte-info">
                         <b>{r.def.nome} <span className="corte-nv">nível {r.nivel}</span></b>
                         <span className="corte-papel">
@@ -404,7 +409,11 @@ export function App() {
                   <ul className="corte-lista">
                     {corte.oferta.map((o) => (
                       <li key={o.def.id} className="corte-card corte-oferta">
-                        <span className="corte-emoji" aria-hidden="true">{o.def.emoji}</span>
+                        {artOfLendario(o.def.id) ? (
+                          <img className="corte-art" src={artOfLendario(o.def.id)} alt={o.def.nome} />
+                        ) : (
+                          <span className="corte-emoji" aria-hidden="true">{o.def.emoji}</span>
+                        )}
                         <span className="corte-info">
                           <b>{o.def.nome}</b>
                           <span className="corte-desc">{o.def.descricao}</span>

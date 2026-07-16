@@ -110,10 +110,10 @@ export const LEGENDARIES: readonly LendarioDef[] = [
 
   // Tier 5 — Império / Galáxia
   {
-    id: "imperatriz_nebulosa",
-    nome: "Imperatriz Nebulosa",
-    descricao: "Rainha cósmica: produção global em outro patamar.",
-    emoji: "🌌",
+    id: "imperatriz_jady",
+    nome: "Imperatriz Jady",
+    descricao: "A soberana branca de olhos de jade — sua produção global sobe a outro patamar.",
+    emoji: "💎",
     tier: 5,
     efeito: { tipo: "producaoMult", porNivel: 1.25 },
   },

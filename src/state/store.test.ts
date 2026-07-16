@@ -236,8 +236,8 @@ describe("Corte Lendária (§4.6.7)", () => {
 
   it("não recruta o que não está na oferta", () => {
     seed({ coroas: 100, ofertaDraft: OFERTA1 });
-    useGame.getState().recrutarLendario("imperatriz_nebulosa"); // não ofertado (e tier 5)
-    expect(useGame.getState().lendarios.imperatriz_nebulosa).toBeUndefined();
+    useGame.getState().recrutarLendario("imperatriz_jady"); // não ofertado (e tier 5)
+    expect(useGame.getState().lendarios.imperatriz_jady).toBeUndefined();
   });
 
   it("não recruta sem Coroas suficientes", () => {

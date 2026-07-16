@@ -440,7 +440,12 @@ button:focus-visible { outline: 3px solid var(--turq-esc); outline-offset: 2px; 
   padding: 8px 10px; box-shadow: 0 2px 0 var(--papel-3);
 }
 .corte-oferta { background: linear-gradient(180deg, #f3ecff, var(--papel)); }
-.corte-emoji { font-size: 1.7rem; flex-shrink: 0; }
+.corte-emoji { font-size: 1.7rem; flex-shrink: 0; width: 46px; text-align: center; }
+.corte-art {
+  flex-shrink: 0; width: 46px; height: 46px; object-fit: cover;
+  border: 2px solid var(--ink); border-radius: 10px; background: var(--papel-2);
+  box-shadow: 0 2px 0 var(--papel-3);
+}
 .corte-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .corte-info b { font-family: var(--display); font-weight: 700; font-size: 0.92rem; }
 .corte-nv { font-family: var(--body); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em; color: #7b4fe0; }
