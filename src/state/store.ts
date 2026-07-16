@@ -584,13 +584,19 @@ export function prodPorSegundo(s: EstadoProducao): number {
 
 export function poderDeClique(s: EstadoClique): number {
   const clique = efeitosCliqueGlobais(s.habilidades);
-  const lendClique = multsDaCorte(s.lendarios).clique; // Lendários de clique multiplicam por fora
-  const ativas = multiplicadorDasHabilidadesAtivas(s.efeitosAtivosAte, s.agoraMs);
   return peixesPorClique(
     prodPorSegundo(s),
-    multiplicadorClique(clique) * lendClique * ativas,
+    multiplicadorCliqueAtual(s),
     bonusColheita(clique),
   );
+}
+
+/** Multiplicador explícito do clique (passivas C1 + Lendários + burst ativo), para feedback da UI. */
+export function multiplicadorCliqueAtual(s: EstadoClique): number {
+  const clique = efeitosCliqueGlobais(s.habilidades);
+  const lendClique = multsDaCorte(s.lendarios).clique;
+  const ativas = multiplicadorDasHabilidadesAtivas(s.efeitosAtivosAte, s.agoraMs);
+  return multiplicadorClique(clique) * lendClique * ativas;
 }
 
 /** Custo de comprar gatos já com a redução dos Lendários de custo (`custoReducao`) aplicada. */

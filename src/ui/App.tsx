@@ -6,6 +6,7 @@ import {
   useGame,
   prodPorSegundo,
   poderDeClique,
+  multiplicadorCliqueAtual,
   custoDaCompra,
   predioDesbloqueado,
   eraAtual,
@@ -16,7 +17,7 @@ import {
 import { buffNoNivel } from "../domain/legendaries";
 import type { TipoEfeitoLendario } from "../domain/legendaries";
 import { descreverEfeito, poolDe } from "../data/abilities";
-import { HABILIDADES_ATIVAS, habilidadeAtivaDoPredio } from "../data/activeAbilities";
+import { HABILIDADES_ATIVAS } from "../data/activeAbilities";
 import { estadoDaHabilidadeAtiva } from "../domain/activeAbilities";
 import { SELO_LENDARIO_ID } from "../data/legendaries";
 import { eraPorNivel } from "../data/eras";
@@ -189,7 +190,9 @@ export function App() {
   const fecharFanfarra = useGame((s) => s.fecharFanfarra);
 
   const rate = prodPorSegundo({ gatos, habilidades, lendarios });
-  const clickPow = poderDeClique({ gatos, habilidades, lendarios, efeitosAtivosAte, agoraMs });
+  const estadoClique = { gatos, habilidades, lendarios, efeitosAtivosAte, agoraMs };
+  const clickPow = poderDeClique(estadoClique);
+  const clickMult = multiplicadorCliqueAtual(estadoClique);
   const habilidadeEmBurst = HABILIDADES_ATIVAS.find(
     (habilidade) =>
       estadoDaHabilidadeAtiva(
@@ -241,9 +244,14 @@ export function App() {
   const proximo = BUILDINGS.find((b) => !predioDesbloqueado(b, gatos));
   // O prédio cujo 1º gato revela o `proximo` é o último desbloqueado (o anterior a ele na escada).
   const reveladorDoProximo = desbloqueados[desbloqueados.length - 1];
+  const ativasVisiveis = HABILIDADES_ATIVAS.filter((ativa) => {
+    const predio = BUILDINGS.find((b) => b.id === ativa.buildingId);
+    return predio !== undefined && predioDesbloqueado(predio, gatos);
+  });
 
   function clicarNoPeixe() {
-    const ganho = clicar();
+    // A aÃ§Ã£o retorna o ganho efetivamente creditado, incluindo multiplicadores e cadÃªncia.
+    const ganho = clicar(Date.now());
     const id = popId.current++;
     const x = Math.round(Math.random() * 44 - 22);
     setPops((p) => [...p, { id, value: ganho, x }]);
@@ -549,12 +557,50 @@ export function App() {
               })}
             </div>
           </div>
+          <div className="active-skills">
+            {ativasVisiveis.map((ativa) => {
+              const n = gatos[ativa.buildingId] ?? 0;
+              const estado = estadoDaHabilidadeAtiva(
+                efeitosAtivosAte[ativa.id],
+                recargasAtivasAte[ativa.id],
+                agoraMs,
+              );
+              const pronta = n >= 1 && estado === "disponivel";
+              const termino = estado === "ativa"
+                ? efeitosAtivosAte[ativa.id]
+                : recargasAtivasAte[ativa.id];
+              const texto = n < 1
+                ? "Compre 1 gato"
+                : estado === "ativa"
+                  ? `ATIVA · ${fmtTempoRestante((termino ?? agoraMs) - agoraMs)}`
+                  : estado === "recarga"
+                    ? `RECARGA · ${fmtTempoRestante((termino ?? agoraMs) - agoraMs)}`
+                    : `DISPARAR · ×${ativa.multiplicadorClique} clique`;
+              return (
+                <button
+                  key={ativa.id}
+                  className="active-skill"
+                  data-estado={estado}
+                  disabled={!pronta}
+                  onClick={() => ativarHabilidadeAtiva(ativa.id)}
+                  title={`${ativa.descricao} Dura ${fmtTempoRestante(ativa.duracaoMs)}; recarga de ${fmtTempoRestante(ativa.recargaMs)}.`}
+                >
+                  <span aria-hidden="true">{ativa.emoji}</span>
+                  <span>{ativa.nome}</span>
+                  <small>{texto}</small>
+                </button>
+              );
+            })}
+          </div>
           <div className="clickstats">
             <div className="totalrate">
               <strong>{fmt(rate)}</strong>
               <span>peixes / segundo</span>
             </div>
-            <p className="clickhint">clique <b>+{fmt(clickPow)}</b> 🐟</p>
+            <p className="clickhint">
+              clique <b>+{fmt(clickPow)}</b> 🐟
+              {clickMult > 1 && <span className="click-mult">×{fmt(clickMult)}</span>}
+            </p>
             {habilidadeEmBurst && (
               <p className="mare-status" aria-live="polite">
                 {habilidadeEmBurst.emoji} {habilidadeEmBurst.nome} · clique ×
@@ -589,29 +635,6 @@ export function App() {
             const prodPredio = b.producaoPorGato * n * multProducao;
             const visiveis = Math.min(n, MAX_SHOWN);
             const art = artOf(b.id);
-            const ativa = habilidadeAtivaDoPredio(b.id);
-            const estadoAtiva = ativa
-              ? estadoDaHabilidadeAtiva(
-                  efeitosAtivosAte[ativa.id],
-                  recargasAtivasAte[ativa.id],
-                  agoraMs,
-                )
-              : null;
-            const prontoParaAtiva = ativa !== undefined && n >= 1 && estadoAtiva === "disponivel";
-            const terminoAtiva = ativa
-              ? estadoAtiva === "ativa"
-                ? efeitosAtivosAte[ativa.id]
-                : recargasAtivasAte[ativa.id]
-              : undefined;
-            const textoAtiva = !ativa
-              ? ""
-              : n < 1
-                ? "Compre 1 gato"
-                : estadoAtiva === "ativa"
-                  ? `ATIVA · ${fmtTempoRestante((terminoAtiva ?? agoraMs) - agoraMs)}`
-                  : estadoAtiva === "recarga"
-                    ? `RECARGA · ${fmtTempoRestante((terminoAtiva ?? agoraMs) - agoraMs)}`
-                    : `DISPARAR · ×${ativa.multiplicadorClique} clique`;
             const d = densidade(n);
             const stripStyle: CSSProperties = {
               ["--cat-h" as string]: `${d.alturaPx}px`,
@@ -704,22 +727,6 @@ export function App() {
                     );
                   })}
                 </div>
-
-                {ativa && (
-                  <div className="lane-active">
-                    <button
-                      className="active-skill"
-                      data-estado={estadoAtiva}
-                      disabled={!prontoParaAtiva}
-                      onClick={() => ativarHabilidadeAtiva(ativa.id)}
-                      title={`${ativa.descricao} Dura ${fmtTempoRestante(ativa.duracaoMs)}; recarga de ${fmtTempoRestante(ativa.recargaMs)}.`}
-                    >
-                      <span aria-hidden="true">{ativa.emoji}</span>
-                      <span>{ativa.nome}</span>
-                      <small>{textoAtiva}</small>
-                    </button>
-                  </div>
-                )}
 
                 <button
                   className="buy"

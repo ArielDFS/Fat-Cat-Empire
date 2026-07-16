@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useGame, prodPorSegundo, poderDeClique, habilidadesDoPredio, eraAtual, corteUI } from "./store";
+import {
+  useGame,
+  prodPorSegundo,
+  poderDeClique,
+  multiplicadorCliqueAtual,
+  habilidadesDoPredio,
+  eraAtual,
+  corteUI,
+} from "./store";
 import { abilityPorId } from "../data/abilities";
 import { BUILDINGS } from "../data/buildings";
 import { SELO_LENDARIO_ID } from "../data/legendaries";
@@ -105,6 +113,7 @@ describe("efeito das passivas na economia (ADR-0002)", () => {
     useGame.getState().comprarHabilidade(CLIQUE10.id);
     expect(prodPorSegundo(useGame.getState())).toBeCloseTo(prodAntes); // produção intacta
     expect(poderDeClique(useGame.getState())).toBeCloseTo(clickAntes * 1.5); // clique ×1,5
+    expect(multiplicadorCliqueAtual(useGame.getState())).toBeCloseTo(1.5); // feedback explícito da UI
   });
 });
 
