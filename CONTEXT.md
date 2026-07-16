@@ -95,6 +95,9 @@ A primeira **Habilidade global** — o **carimbo imperial** estampado na Caixa d
 Coroa a atravessar a Dinastia (por isso o §6 reseta tudo *exceto* o Selo). "Selo" = sinete/carimbo do
 império, não vedação nem selo postal. Ver GAME_DESIGN §3.6.
 _Avoid_: selo de vedação, carimbo (use "Selo Imperial"), bônus de prestígio (isso é a Coroa).
+> **Revisto ([ADR-0004](docs/adr/0004-corte-lendaria-e-rumo-hibrido.md)):** o Selo vira o **Gato
+> Lendário #0** (recrutado de graça na 1ª Dinastia, ×1,5 produção) — unifica com a Corte Lendária,
+> some o caso especial. Migração pendente.
 
 ## Recursos
 
@@ -104,10 +107,20 @@ Zera na Nova Dinastia.
 _Avoid_: moeda, dinheiro, ouro, comida.
 
 **Coroa Felina**:
-O recurso **permanente**, ganho ao fundar uma Nova Dinastia. No slice, concede bônus global que
-atravessa runs; no endgame, será também a moeda que compra Artefatos. Deve **persistir como contagem**
-(não some ao ser "gasta"), para continuar dando o bônus passivo mesmo depois de virar moeda.
+O recurso **permanente**, ganho ao fundar uma Nova Dinastia. É a **moeda gastável** da **Corte
+Lendária** (recruta e sobe de nível os Gatos Lendários) — o vetor de progresso permanente do jogo.
+Escala por `cbrt(peixes_gastos_na_run)`. Ver [ADR-0004](docs/adr/0004-corte-lendaria-e-rumo-hibrido.md).
 _Avoid_: prestígio (isso é o ato), gema, cristal, ponto.
+> **Histórico:** até a v0.6 a Coroa era **contagem não-gasta** que dava `+2%/produção` (`CROWN_BONUS`).
+> O ADR-0004 a tornou gastável e matou o bônus (o buff agora vem dos Lendários). Migração pendente.
+
+**Gato Lendário**:
+Um gato **com nome, rosto e arte única** — o oposto do Gato trabalhador anônimo (e **depende** dele
+pra saltar). Recrutado e melhorado na **Corte Lendária** com **Coroas Felinas**; cada um dá um **perk
+global permanente** de papel próprio (produção, clique, custo, offline, adianta-Era). É a forma
+concreta dos "Artefatos" do endgame. Coleção convergente (todos pegam todos no fim). Ver §4.6.7 e
+[ADR-0004](docs/adr/0004-corte-lendaria-e-rumo-hibrido.md).
+_Avoid_: herói, personagem jogável, unidade (o Lendário não trabalha na lane; é meta), gacha.
 
 ## Ciclo
 

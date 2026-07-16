@@ -96,6 +96,13 @@ o jogador compra **gatos** dentro dele. Os prédios diferem pela **produção po
 > Os 4 prédios acima são **pilotos** — o plano é acrescentar muitos mais em ordem de custo crescente
 > (o Píer, ex-Banco do Atum, não é o teto da escada). Ver ART_STYLE §2C.
 
+> **✅ Escada completa + motor migrado (2026-07-16):** `data/buildings.ts` tem os **36 prédios**
+> (6 Eras × 6, o 6º = Obra `ehObra`), curva travada da §4.6.3, campos `era`/`ehObra`. O **motor roda
+> no modelo v0.6** (§4.6.9): unlock por **cadeia de compra** (deriva de `gatos`), Era por **Obra**,
+> Coroa por **gastos**. A coluna "Desbloqueio (peixes acum.)" e o campo `desbloqueio` **caíram**.
+> Passivas dos 32 prédios novos são placeholders ("Melhoria N") por fallback; arte cai na Caixa.
+> Nomes/tipos = camada de humor, editáveis.
+
 > **⚠️ Modelo de desbloqueio revisto (§4.6.9, ADR-0003):** o "desbloqueio por peixes acumulados
 > (`lifetime`)" acima é o modelo **atual do slice**. O alvo é **cadeia de compra** (comprar o 1º gato
 > revela o próximo prédio) — sem `lifetime`. A coluna "Desbloqueio (peixes acum.)" cai na migração; o
@@ -226,10 +233,11 @@ um dos eixos.
 
 ## 4.5 Eras do Império — o eixo civilizacional `[decisão v0.3 — driver revisto pela v0.6]`
 
-> **⚠️ Revisto (§4.6.9, ADR-0003):** "Era = função pura de `lifetime`" **caiu**. A Era passa a virar
-> ao **construir uma Obra** (o prédio-virada da Era) e vira **estado guardado**, não derivado do
-> `lifetime`. O texto abaixo descreve o **modelo atual do slice** (dirigido por `lifetime`), que roda
-> até a sessão de migração. Título, mundo bespoke e fanfarra sobrevivem; só o **gatilho** muda.
+> **⚠️ Revisto e ✅ IMPLEMENTADO (§4.6.9, ADR-0003, 2026-07-16):** "Era = função pura de `lifetime`"
+> **caiu**. A Era agora vira ao **construir uma Obra** (o prédio-virada da Era); é derivada de `gatos`
+> (Era = 1 + nº de Obras construídas), não do `lifetime`. O texto abaixo descreve o **modelo antigo**
+> (dirigido por `lifetime`) — mantido como histórico. Título, mundo bespoke, fanfarra e lump
+> sobreviveram; só o **gatilho** mudou (de cruzar limiar → construir a Obra).
 
 **Problema que resolve:** desbloquear prédios um após o outro dá progressão, mas não dá a *sensação
 de civilização evoluindo*. As **Eras** são essa camada — **sem** adicionar uma economia paralela
@@ -326,7 +334,7 @@ da caixa de papelão ao intergalático. Toda decisão abaixo serve a isso.
 - É o modelo Cookie Clicker / AdVenture Capitalist. "Nada some" vale **na run** — a **Dinastia**
   (§4.6.5) reseta tudo, e isso é outro escopo.
 
-### 4.6.3 Fórmula global de curva
+### 4.6.3 Fórmula global de curva `[travado 2026-07-16 — implementada em data/buildings.ts]`
 - Como tudo produz ao mesmo tempo pra sempre, a produção total é a **soma de exponenciais**. Os
   números de cada prédio (custo/gato, produção/gato, limiar) **saem de uma fórmula** função da
   posição na escada — **não** do feeling caso a caso.
@@ -335,6 +343,26 @@ da caixa de papelão ao intergalático. Toda decisão abaixo serve a isso.
   todos os anteriores.
 - Serve os alvos "início mais rápido, fim mais duro": é **tuning da curva + multiplicadores de Era**,
   não da contagem de prédios.
+
+**A curva (escada de 36 = 6 Eras × 6) `[v0.7 — suavizada 2026-07-16]`:** geométrica no índice
+global `i`, com os **pilotos i=0..3 canônicos do Cookie Clicker** (15/0,1 · 100/1 · 1.100/8 ·
+12.000/47 — §3.2; §8 validado) e o resto **suavizado**, re-ancorado no Píer:
+
+```
+custoBasePorGato(i≥4) = 12.000 · 4,5^(i-3)     (custo ×4,5/prédio)
+producaoPorGato(i≥4)  = 47     · 4,0^(i-3)     (produção ×4,0/prédio)
+```
+
+**Por que ×4,5 e não o ×9,283 canônico:** o alvo virou o **híbrido tipo Cookie Clicker — campanha
+finita + motor endless** (ver visão em §4.6.6/§13). Curva suave = mais prédios por faixa de
+magnitude, prédios antigos relevantes por mais tempo, progressão **granular** (não "one-shot" no
+late-game). O 36º custa **~9,6e24** (24 ordens de grandeza, vs 34 no ×9,283); **22 prédios cabem no
+inteiro exato do float64** (9e15), então `break_infinity.js` só é preciso muito além do fim da
+campanha (§9/§13, adiado — e "endless tipo CC" nem exige, já que o CC vive dentro do float64 com
+notação nomeada). A razão custo/produção sobe de ~150 a ~8.000 de propósito (eficiência decrescente
+que empurra pro prestígio); quem a restaura é o **vetor permanente** (Lendários, §4.6.7). Há um
+degrau proposital no i=3→4 (×9,283 → ×4,5): pilotos preservados, cauda suave. Função de `i` ⇒ robusta
+a **inserir prédios no meio** (§4.6.9 ponto 4).
 
 ### 4.6.4 Decoração-fundo + arquétipos (o antídoto ao enchimento)
 - Prédio é **único na arte, no flavor e no papel**; mecanicamente é **clone escalado** (a matemática
@@ -387,6 +415,16 @@ da caixa de papelão ao intergalático. Toda decisão abaixo serve a isso.
   mais alta** atingida — o `eraMaisAlta` que o §4.5 já persiste).
 
 ### 4.6.7 Gatos Lendários = a coleção meta (a forma concreta dos "Artefatos" do §6/§13)
+
+> **✅ RESOLVIDO em grelha (2026-07-16, [ADR-0004](docs/adr/0004-corte-lendaria-e-rumo-hibrido.md)):**
+> a aquisição é a **Corte Lendária** — não gacha puro. **Draft de 3** do pool (por tiers de Era) →
+> recrutar 1 (Coroas) → **reroll** da oferta paga Coroas, com **piso** (o pool encolhe ao coletar, o
+> reroll nunca vira puzzle — antipilar §1). O RNG afeta só *qual* entra, **nunca os stats**. O
+> **poder é determinístico**: cada Lendário sobe de **nível** (custo crescente; buff `×~1,15`/nível),
+> e M = produto dos buffs (multiplicativo — quebra as paredes exponenciais; um aditivo estagnaria).
+> A **Coroa é a moeda** (gastável, `cbrt(gastos/DIV)` — some o `+2%` do §6). O **Selo Imperial vira o
+> Lendário #0** (grátis na 1ª Dinastia). Loop validado por simulação: ~16 dinastias pra 36 prédios,
+> sem travar; nº de dinastias sintoniza pelo DIVISOR. Números → §8. **A implementar** (sessão dedicada).
 - **O que são:** gatos **com nome, rosto e arte única** (o oposto do trabalhador anônimo). **Não
   quebram** a ficção anônima — **dependem** dela: o enxame sem rosto é o que faz o Lendário saltar.
 - **Elenco grande** (muito mais que o nº de Eras — a variedade que o jogador quer é de **elenco**).
@@ -401,21 +439,29 @@ da caixa de papelão ao intergalático. Toda decisão abaixo serve a isso.
 - **Custo consciente:** o endgame ganha uma **camadinha de otimização** (qual puxar, qual upgradar).
   Aceito **de olho aberto** — é otimização **por cima** do espetáculo, só no endgame, não no corpo.
 
-### 4.6.8 Pendências travadas pra sessão dedicada (Gatos Lendários)
-Não resolver de improviso — merecem grelha própria:
-- Tamanho do elenco · lista de perks e seus papéis · tiers do pool por Era.
-- Custo de reroll · curva de upgrade · piso pra o reroll não virar o puzzle que foi rejeitado.
-- **Moeda:** o §6 diz que Coroas "não são gastas" (contagem, bônus passivo). Os Lendários são
-  **comprados** (gasto). Reconciliar: Coroas viram gastáveis? Legado é derivado das Coroas? Decidir
-  na sessão dedicada.
+### 4.6.8 Pendências dos Gatos Lendários — ✅ RESOLVIDAS ([ADR-0004](docs/adr/0004-corte-lendaria-e-rumo-hibrido.md), 2026-07-16)
+Resolvidas na grelha (a **forma**; os números finos são §8):
+- **Moeda:** ✅ a **Coroa vira gastável** (`cbrt(gastos/DIV)`); morre o `+2%` do §6; **não há Legado
+  separado**. Selo Imperial → **Lendário #0**.
+- **Aquisição:** ✅ **Corte Lendária** — draft de 3 + reroll com **piso** (o pool encolhe ao coletar),
+  RNG só na oferta, **nunca nos stats**; poder determinístico por **nível** (buff `×~1,15`/nível,
+  multiplicativo).
+- **Papéis:** ✅ ~5 — produção global, clique, corte de custo, ganho offline, adianta-Era.
+- **Ainda a afinar (§8, na implementação):** tamanho exato do elenco (~12, 3 tiers), curva de custo de
+  nível e de reroll, e o DIVISOR da coroa (sintoniza o nº de dinastias da campanha, ~15–25).
 
 ### 4.6.9 A espinha de progressão: Obras e cadeia de compra `[decisão v0.6, ADR-0003]`
 
 **Revê o §4.5 (Era = função pura de `lifetime`), a base da Coroa do §6 e o gatilho do §4.6.5.** O
 `lifetime` **deixa de dirigir qualquer mecânica** — a progressão passa a ser conduzida por **atos
 concretos e visíveis** (construir prédios), não por um odômetro invisível. Ver [ADR-0003](docs/adr/0003-progressao-por-obras.md).
-**Decidido em grelha; ainda NÃO implementado** — o slice roda no modelo `lifetime` até a sessão de
-migração. Este é o mapa dessa migração.
+
+> **✅ IMPLEMENTADO (2026-07-16).** Motor migrado: cadeia de compra (unlock deriva de `gatos`, sem
+> flag), Era = 1 + Obras construídas (`domain/era.ts eraDeObras`, derivada de `gatos` — **sem estado
+> separado**: `gatos` já É o registro dos atos), fanfarra + lump ao construir a Obra (`comprarGatos`),
+> Coroa por `gastos` (`sqrt(gastos/DIV)`), `lifetime` vira vitrine. Save **v2** com migração v1→v2
+> (`gastos ≈ lifetime`). Removidos: `nivelDaEra`/`LIMIARES`, `Building.desbloqueio`, `Era.limiar`,
+> `eraMaisAlta`. tsc + 88 testes + build verdes.
 
 1. **Cadeia de compra.** Comprar o **1º gato** de um prédio (1º gasto de peixes nele) **revela o
    próximo prédio**. O gate é o **custo crescente** do 1º gato — que já exige produção acumulada, então
@@ -470,12 +516,12 @@ A **base da coroa é o `lifetime`** (produção genuína da run) — que **exclu
 por decisão): o presente comemorativo não infla o prestígio, do mesmo jeito que não empurra Era de
 graça. Coroa mede mérito; lump é peixe pra gastar.
 
-> **⚠️ Base revista (§4.6.9, ADR-0003):** com o `lifetime` removido como driver, a Coroa passa a
-> escalar pelos **peixes gastos na run** — `coroas = floor(sqrt(gastos / PRESTIGE_DIVISOR))`, onde
-> `gastos` = tudo que sai do saldo (gatos + passivas + Obras). Como `gastos ≈ produção`, os alvos do
-> §8 aproximadamente sobrevivem e o `CROWN_BONUS` talvez nem mude. A preocupação "lump não pode inflar
-> o `lifetime`" **evapora** (não há mais `lifetime`). Modelo **atual** (base `lifetime`) roda até a
-> migração. A tabela abaixo passa a ler "peixes **gastos** na run" na 1ª coluna.
+> **✅ Base revista e IMPLEMENTADA (§4.6.9, ADR-0003, 2026-07-16):** com o `lifetime` removido como
+> driver, a Coroa escala pelos **peixes gastos na run** — `coroas = floor(sqrt(gastos / PRESTIGE_DIVISOR))`,
+> onde `gastos` = tudo que sai do saldo (gatos + passivas + Obras). Como `gastos ≈ produção`, os alvos
+> do §8 aproximadamente sobrevivem e o `CROWN_BONUS` não mudou. A preocupação "lump não pode inflar o
+> `lifetime`" **evaporou** (o `lifetime` é só vitrine agora). A tabela abaixo lê "peixes **gastos** na
+> run" na 1ª coluna. O reset da run zera `gastos` junto com peixes/gatos/habilidades.
 
 **Reseta:** peixes, gatos, prédios desbloqueados, habilidades compradas (exceto Selo Imperial), Era
 (volta ao Beco). Tudo isso **cai em cascata de `lifetime → 0`**: prédios re-travam e a Era volta à I
@@ -487,6 +533,12 @@ seguintes), conquistas, estatísticas vitalícias.
 
 As **Coroas persistem como contagem** (não são "gastas") — dão bônus passivo hoje e, no endgame,
 serão também a moeda dos **Artefatos** (§13). Não modele coroa como recurso consumível.
+
+> **✅ REVISTO ([ADR-0004](docs/adr/0004-corte-lendaria-e-rumo-hibrido.md), 2026-07-16):** a Coroa
+> **deixa de dar bônus e vira moeda GASTÁVEL** — morre o `CROWN_BONUS` (`+2%/produção`); a Coroa é
+> gasta na **Corte Lendária** (§4.6.7), que passa a ser o vetor de progresso permanente. A fórmula
+> vira **`cbrt(gastos/DIVISOR)`** (era `sqrt`). O **Selo Imperial vira o Lendário #0**. **Decidido,
+> a implementar** — o código ainda roda o modelo `sqrt` + `CROWN_BONUS` + Selo-flag até a migração.
 
 > **Endgame do jogo completo (§4.6.6–4.6.7, v0.5):** os "Artefatos" ganharam forma — são os **Gatos
 > Lendários**, uma coleção convergente comprada com a moeda de prestígio (via sorteio + reroll +
@@ -664,4 +716,8 @@ animações de trabalho e celebração · migração para Phaser/Canvas se as la
 | 2026-07-15 | **Mudança visual de prédio por marco — descontinuada (documentando decisão de grelha antiga)** | Registro de uma decisão de grelha que nunca tinha sido escrita: os marcos **não** mudam mais o sprite do prédio (o antigo "nível 1→2 em 25 gatos, 2→3 em 100" saiu), junto com os **"3 estágios do Beco"**. A progressão visível (pilar §1) passa a ser **troca de mundo por Era** (§4.5/§4.6.5) + enxame enchendo a lane. Motivo: sprites por-nível são caros e de baixo retorno no modelo empilhado (§4.6.4). Reconcilia §1, §2, §3.4, ART_STYLE §7, CONTEXT e README — que ainda descreviam a feature como ativa. O marco hoje faz **só** abrir a passiva |
 | 2026-07-15 | **Nova Dinastia (passo 7) — grelha de prestígio** | Sessão de grelha do prestígio do slice (domain já pronto/testado; a grelha resolveu a *cola*). **Selo Imperial** concretizado: 1ª Habilidade global (§3.6), concedido na 1ª Dinastia, produção ×1,5, sobrevive ao reset; modelado como **flag boolean** no estado + **fator global opaco** no domain (`production` recebe o fator, sem saber que é "Selo"). **Reset** definido campo a campo, em cascata de `lifetime→0` (prédios re-travam, Era→Beco); coroa lê o `lifetime` (produção genuína, **exclui lumps de Era**), calculada antes do reset; Selo **não empilha**. **`runInicioTs`** plantado (relógio de parede) pra a conquista "Dinastia Descartável" — a *avaliação* fica no passo 8. Save ganha `seloImperial?` e `runInicioTs?` como **campos opcionais sem bump** (padrão do `eraMaisAlta`). Tela de confirmação enxuta (reusa `.modal`, mostra perde/mantém/coroas/multiplicador via `resumoNovaDinastia`); troca-pro-Beco é a comemoração; linha do Selo só na estreia. Botão no HUD, escondido até ≥1 coroa (placement provisório). CONTEXT: +**Selo Imperial**, +**Habilidade global** |
 | 2026-07-15 | **Nova Dinastia — Selo visível + contador de Dinastias** | Ajuste de feedback após teste: (1) o Selo Imperial agora **aparece carimbado na placa da Caixa de Papelão** (sinete dourado com o gato-rei) quando concedido — antes o ×1,5 valia mas era invisível na tela principal, contrariando a promessa do modal; (2) novo estado permanente **`dinastias`** (contagem de fundações — não derivável das coroas, que crescem por valor), exibido no HUD após a 1ª e persistido como campo opcional sem bump. Só UI + um contador; nenhuma regra de economia muda |
+| 2026-07-16 | **Curva travada (§4.6.3) + escada de 36 prédios em data/ (content-first)** | Grelha da §4.6.3: fórmula geométrica no índice global `i` — pilotos i=0..3 = valores canônicos do Cookie Clicker (§8 preservado), i≥4 = continuação `custo 15·9,283^i` / `prod 0,1·7,775^i` (emenda lisa no Píer, 2 alg. signif.). **Achado:** roda inteira em float64 (36º ~1,1e35 « overflow 1,8e308); >9e15 perde só exatidão de inteiro (invisível formatado) ⇒ `break_infinity` segue no backlog. `data/buildings.ts` reescrito com os **36 prédios** (6 Eras × 6, 6º = Obra), +campos `era`/`ehObra`, `tipoGato` relaxado p/ `string`. **Motor inalterado** (ainda `lifetime`/`desbloqueio`); passivas dos 32 novos = placeholder por fallback, arte cai na Caixa. Nomes/tipos = humor editável. tsc+83 testes+build verdes |
 | 2026-07-16 | **v0.6 — progressão por Obras (cadeia de compra), `lifetime` removido como driver ([ADR-0003](docs/adr/0003-progressao-por-obras.md))** | Grelha da espinha de progressão até o endgame. **Revê §4.5 e a base da Coroa (§6), recém-implementadas.** O `lifetime` deixa de dirigir mecânica (vira estatística de vitrine). **Cadeia de compra:** 1º gato comprado revela o próximo prédio (gate = custo crescente, auto-pacing). **Obra** (termo novo no CONTEXT): prédio-virada produtor, último da cadeia de cada Era; construí-la vira a Era (mundo + fanfarra) e revela o 1º prédio da seguinte. **Era vira estado guardado** (Obras construídas), não derivada do `lifetime`. **Coroa escala por peixes gastos na run** (`sqrt(gastos/DIV)`), não `lifetime`. **Estrutura de endgame: 6 Eras × 6 prédios = 36** (o 6º de cada Era é a Obra), "6 por Era" extensível. Adiciona §4.6.9; notas de revisão em §3.3/§4.5/§4.6.5/§6; CONTEXT: +**Obra**, "Era" corrigida. **Decisão documentada; implementação (migração de save + estado novo) é sessão dedicada** — o slice roda no modelo `lifetime` até lá |
+| 2026-07-16 | **✅ v0.6 — motor migrado (cadeia de compra + Era-por-Obra + Coroa-por-gastos + save v2)** | Implementação da espinha do ADR-0003/§4.6.9. **Unlock por cadeia:** `predioDesbloqueado(b, gatos)` = anterior tem ≥1 gato (1º prédio sempre visível); **sem flag persistido** — `gatos` já É o registro dos atos concretos. **Era-por-Obra:** `domain/era.ts` troca `nivelDaEra(lifetime)` por `eraDeObras(nObras)`; `eraAtual(gatos)`/`obrasConstruidas(gatos)` na store; construir a Obra (1º gato, `ehObra`) dispara fanfarra + lump em `comprarGatos` (nunca offline). Última Obra "aponta" p/ Era 7 (backlog) → sem fanfarra. **Coroa por `gastos`:** novo estado `gastos` (gatos+passivas+Obras); `coroasGanhasNaRun(gastos)` = `sqrt(gastos/DIV)`; math idêntica. **`lifetime` = vitrine** (exibido sob a taxa + no dev; dirige zero). **Save v2:** +`gastos`, −`eraMaisAlta`; migração v1→v2 semeia `gastos ≈ lifetime` (preserva prestígio). **Removidos:** `nivelDaEra`/`LIMIARES`/`Era.limiar`/`Building.desbloqueio`/`aplicarGanhoLifetime`/`eraMaisAlta`. DevPanel: "Construir próxima Obra", `gastos → N 👑`. Testes reescritos (era/store) + novo `save.test` (migração). tsc + **88 testes** + build verdes. **Pendências:** 4 passivas reais e arte por prédio novo; multiplicador global de Era do §4.6.5 (hoje ainda lump) segue fora de escopo |
+| 2026-07-16 | **v0.7 — Corte Lendária + rumo híbrido registrados ([ADR-0004](docs/adr/0004-corte-lendaria-e-rumo-hibrido.md))** | Grelha dos Lendários (§4.6.8) fechada e registrada. **Rumo:** híbrido tipo Cookie Clicker (campanha finita bespoke + motor endless; "endless tipo CC" = replay + número dentro do float64, `break_infinity` adiado). **Coroa vira moeda GASTÁVEL** (`cbrt(gastos/DIV)`; morre o `CROWN_BONUS +2%`); é o que a **Corte Lendária** consome. **Corte Lendária** (revê o gacha do §4.6.7): draft de 3 + reroll com **piso** (RNG só na oferta, nunca nos stats — antipilar §1); poder **determinístico** por nível (buff ×~1,15/nível, **multiplicativo** — quebra paredes; aditivo estagnaria, provado por simulação). ~5 papéis (produção/clique/custo/offline/adianta-Era). **Selo → Lendário #0**. Loop **validado** (sim.: ~16 dinastias/36 prédios, sem travar; DIVISOR sintoniza). Reconcilia §4.6.7/§4.6.8/§6/CONTEXT (+**Gato Lendário**, Coroa e Selo redefinidos). **Decidido, NÃO implementado** — código ainda em `sqrt`+`CROWN_BONUS`+Selo-flag; migração é a próxima sessão (build grande: data/domain/estado/UI) |
+| 2026-07-16 | **v0.7 — balanceamento: curva suavizada ×4,5 + passivas mais baratas + rumo híbrido (endless tipo CC)** | Grelha de balanceamento (pesquisa de gênero: Cookie Clicker/AdVenture Capitalist/Clicker Heroes/Antimatter/Egg Inc). **Decisão de rumo:** FCE mira o **híbrido tipo Cookie Clicker** — campanha finita e bespoke (6 Eras/36 prédios) + **motor endless** (Dinastia/Coroa/Lendários compõem sem teto; conteúdo por fórmula além da Era 6). "Endless tipo CC" ≠ conteúdo infinito nem nested layers: é replay + número-sobe **dentro do float64** (`break_infinity` só além de ~1e300 — segue adiado). **Curva suavizada (§4.6.3):** de ×9,283→**×4,5** custo / ×7,775→**×4,0** produção, re-ancorada no Píer (pilotos i0-3 mantidos). 36º custa ~9,6e24 (24 ordens vs 34); 22 prédios no inteiro exato; late-game granular (não one-shot). **Passivas:** `FATOR_CUSTO` 10→**4** (1ª passiva custava ~40 gatos; queixa "caras desde o prédio 1"). **Decidido em grelha, a implementar:** Coroa deixa de dar `+2%/produção` (mata `CROWN_BONUS`) e vira **moeda gastável dos Lendários** (resolve a moeda do §4.6.8); fórmula da Coroa `sqrt`→**`cbrt`** (Cookie Clicker, "8× pra dobrar", doma o "coroas escalonando muito"). Esses dois entram na **grelha dos Lendários** (o motor endless). Só dados tocados; tsc + 88 testes + build verdes |
