@@ -360,89 +360,95 @@ export function App() {
             aria-labelledby="corte-titulo"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="corte-titulo">Corte Lendária 🐈‍⬛</h2>
-            <p className="corte-coroas">👑 <b>{fmt(corte.coroas)}</b> coroas</p>
+            <div className="corte-topo">
+              <h2 id="corte-titulo">Corte Lendária</h2>
+              <span className="corte-coroas" title="Coroas Felinas — a moeda da Corte">
+                <span className="corte-coroas-ico" aria-hidden="true">👑</span> {fmt(corte.coroas)}
+              </span>
+            </div>
 
-            {corte.recrutados.length > 0 && (
-              <div className="corte-sec">
-                <h3 className="corte-h">Sua Corte</h3>
-                <ul className="corte-lista">
-                  {corte.recrutados.map((r) => (
-                    <li key={r.def.id} className="corte-card">
-                      {artOfLendario(r.def.id) ? (
-                        <img className="corte-art" src={artOfLendario(r.def.id)} alt={r.def.nome} />
-                      ) : (
-                        <span className="corte-emoji" aria-hidden="true">{r.def.emoji}</span>
-                      )}
-                      <span className="corte-info">
-                        <b>{r.def.nome} <span className="corte-nv">nível {r.nivel}</span></b>
+            {/* Recrutar — o herói: retratos grandes, escolha 1 de 3 */}
+            {corte.poolVazio ? (
+              <p className="corte-vazio">
+                🏆 Coleção completa — todos os Lendários já disponíveis estão na sua Corte. Alcance
+                Eras mais altas para destravar novos.
+              </p>
+            ) : (
+              <section className="corte-draft">
+                <div className="corte-sec-cab">
+                  <h3 className="corte-h">Recrutar</h3>
+                  <span className="corte-h-sub">escolha 1 de {corte.oferta.length}</span>
+                </div>
+                <div className="corte-draft-cards">
+                  {corte.oferta.map((o) => (
+                    <article key={o.def.id} className="corte-hero">
+                      <div className="corte-hero-art">
+                        {artOfLendario(o.def.id) ? (
+                          <img src={artOfLendario(o.def.id)} alt={o.def.nome} />
+                        ) : (
+                          <span className="corte-hero-emoji" aria-hidden="true">{o.def.emoji}</span>
+                        )}
+                      </div>
+                      <div className="corte-hero-body">
+                        <b className="corte-hero-nome">{o.def.nome}</b>
                         <span className="corte-papel">
-                          {PAPEL_LENDARIO[r.def.efeito.tipo]}:{" "}
-                          {descreverBuffLendario(r.def.efeito.tipo, r.def.efeito.porNivel, r.nivel)}
+                          {PAPEL_LENDARIO[o.def.efeito.tipo]} ·{" "}
+                          {descreverBuffLendario(o.def.efeito.tipo, o.def.efeito.porNivel, 0)}
                         </span>
+                        <span className="corte-hero-desc">{o.def.descricao}</span>
+                        <button
+                          className="corte-recrutar-btn"
+                          disabled={!o.podeRecrutar}
+                          onClick={() => recrutarLendario(o.def.id)}
+                        >
+                          Recrutar <span className="corte-preco">👑 {fmt(o.custoRecrutar)}</span>
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+                <button
+                  className="corte-reroll"
+                  disabled={!corte.podeReroll}
+                  onClick={() => rerollOferta()}
+                >
+                  🎲 Trocar oferta · 👑 {fmt(corte.custoReroll)}
+                </button>
+              </section>
+            )}
+
+            {/* Sua Corte — a tira de campeões recrutados */}
+            {corte.recrutados.length > 0 && (
+              <section className="corte-roster-sec">
+                <h3 className="corte-h">Sua Corte · {corte.recrutados.length}</h3>
+                <div className="corte-roster">
+                  {corte.recrutados.map((r) => (
+                    <article key={r.def.id} className="corte-champ">
+                      <div className="corte-champ-art">
+                        {artOfLendario(r.def.id) ? (
+                          <img src={artOfLendario(r.def.id)} alt={r.def.nome} />
+                        ) : (
+                          <span className="corte-champ-emoji" aria-hidden="true">{r.def.emoji}</span>
+                        )}
+                        <span className="corte-nivel">nv {r.nivel}</span>
+                      </div>
+                      <b className="corte-champ-nome">{r.def.nome}</b>
+                      <span className="corte-champ-buff">
+                        {descreverBuffLendario(r.def.efeito.tipo, r.def.efeito.porNivel, r.nivel)}
                       </span>
                       <button
-                        className="corte-btn-acao"
+                        className="corte-up-btn"
                         disabled={!r.podeSubir}
                         onClick={() => subirNivelLendario(r.def.id)}
                         title="Subir nível"
                       >
                         ▲ 👑 {fmt(r.custoProxNivel)}
                       </button>
-                    </li>
+                    </article>
                   ))}
-                </ul>
-              </div>
+                </div>
+              </section>
             )}
-
-            <div className="corte-sec">
-              <h3 className="corte-h">
-                Recrutar {!corte.poolVazio && `· escolha 1 de ${corte.oferta.length}`}
-              </h3>
-              {corte.poolVazio ? (
-                <p className="corte-vazio">
-                  🏆 Coleção completa — todos os Lendários já disponíveis estão na sua Corte. Alcance
-                  Eras mais altas pra destravar novos.
-                </p>
-              ) : (
-                <>
-                  <ul className="corte-lista">
-                    {corte.oferta.map((o) => (
-                      <li key={o.def.id} className="corte-card corte-oferta">
-                        {artOfLendario(o.def.id) ? (
-                          <img className="corte-art" src={artOfLendario(o.def.id)} alt={o.def.nome} />
-                        ) : (
-                          <span className="corte-emoji" aria-hidden="true">{o.def.emoji}</span>
-                        )}
-                        <span className="corte-info">
-                          <b>{o.def.nome}</b>
-                          <span className="corte-desc">{o.def.descricao}</span>
-                          <span className="corte-papel">
-                            {PAPEL_LENDARIO[o.def.efeito.tipo]}:{" "}
-                            {descreverBuffLendario(o.def.efeito.tipo, o.def.efeito.porNivel, 0)}
-                          </span>
-                        </span>
-                        <button
-                          className="corte-btn-acao"
-                          disabled={!o.podeRecrutar}
-                          onClick={() => recrutarLendario(o.def.id)}
-                          title="Recrutar"
-                        >
-                          👑 {fmt(o.custoRecrutar)}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                  <button
-                    className="corte-reroll"
-                    disabled={!corte.podeReroll}
-                    onClick={() => rerollOferta()}
-                  >
-                    🎲 Trocar oferta — 👑 {fmt(corte.custoReroll)}
-                  </button>
-                </>
-              )}
-            </div>
 
             <button className="modal-ok" onClick={() => setCorteAberta(false)}>Fechar</button>
           </div>

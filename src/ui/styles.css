@@ -428,43 +428,109 @@ button:focus-visible { outline: 3px solid var(--turq-esc); outline-offset: 2px; 
 .corte-btn-txt b { font-family: var(--display); font-weight: 700; font-size: 0.9rem; }
 .corte-btn-txt span { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.9; }
 
-.modal-corte { max-width: 460px; text-align: left; max-height: 86vh; overflow-y: auto; }
-.modal-corte h2 { text-align: center; }
-.corte-coroas { text-align: center; font-family: var(--display); font-size: 1.1rem; color: var(--dourado-esc) !important; margin: 0 0 6px; }
-.corte-sec { margin-top: 14px; }
-.corte-h { font-family: var(--display); font-size: 0.9rem; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.04em; }
-.corte-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.corte-card {
-  display: flex; align-items: center; gap: 10px;
-  background: var(--papel); border: 2px solid var(--ink); border-radius: 12px;
-  padding: 8px 10px; box-shadow: 0 2px 0 var(--papel-3);
+.modal-corte { max-width: 680px; text-align: left; max-height: 88vh; overflow-y: auto; padding: 20px; }
+.corte-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.modal-corte h2 { margin: 0; }
+.corte-coroas {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--display); font-weight: 700; font-size: 1.15rem; color: var(--dourado-esc);
+  background: linear-gradient(180deg, #fff6df, var(--creme)); border: 2px solid var(--ink);
+  border-radius: 999px; padding: 4px 15px 4px 11px; box-shadow: 0 3px 0 var(--dourado-esc);
+  font-variant-numeric: tabular-nums;
 }
-.corte-oferta { background: linear-gradient(180deg, #f3ecff, var(--papel)); }
-.corte-emoji { font-size: 1.7rem; flex-shrink: 0; width: 46px; text-align: center; }
-.corte-art {
-  flex-shrink: 0; width: 46px; height: 46px; object-fit: cover;
-  border: 2px solid var(--ink); border-radius: 10px; background: var(--papel-2);
-  box-shadow: 0 2px 0 var(--papel-3);
+.corte-coroas-ico { font-size: 1.05rem; }
+
+.corte-sec-cab { display: flex; align-items: baseline; gap: 8px; margin: 16px 0 10px; }
+.corte-h { font-family: var(--display); font-size: 1rem; margin: 16px 0 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+.corte-sec-cab .corte-h { margin: 0; }
+.corte-h-sub { font-size: 0.72rem; color: var(--ink-soft); }
+
+/* Draft — os cards-herói (retrato grande em veludo roxo, moldura dourada) */
+.corte-draft-cards {
+  display: flex; gap: 12px; overflow-x: auto; padding: 2px 2px 10px;
+  scroll-snap-type: x mandatory;
 }
-.corte-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-.corte-info b { font-family: var(--display); font-weight: 700; font-size: 0.92rem; }
-.corte-nv { font-family: var(--body); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em; color: #7b4fe0; }
-.corte-desc { font-size: 0.74rem; color: var(--ink-soft); line-height: 1.25; }
-.corte-papel { font-size: 0.72rem; color: var(--turq-esc); font-weight: 600; }
-.corte-btn-acao {
-  flex-shrink: 0; font-family: var(--display); font-weight: 700; font-size: 0.82rem;
-  background: var(--dourado); color: var(--ink); border: 2px solid var(--ink);
-  border-radius: 10px; padding: 7px 11px; cursor: pointer; box-shadow: 0 3px 0 var(--dourado-esc);
+.corte-hero {
+  flex: 1 0 176px; max-width: 210px; scroll-snap-align: start;
+  display: flex; flex-direction: column;
+  border: 2px solid var(--ink); border-radius: 18px; overflow: hidden;
+  background: linear-gradient(180deg, #fffaf0, var(--papel));
+  box-shadow: 0 4px 0 var(--dourado-esc), 0 12px 26px rgba(36, 28, 46, 0.18);
+  transition: transform 0.12s ease;
 }
-.corte-btn-acao:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 var(--dourado-esc); }
-.corte-btn-acao:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.4); }
+.corte-hero:hover { transform: translateY(-3px); }
+.corte-hero-art {
+  position: relative; aspect-ratio: 1 / 1; display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 34%, #9a72f0 0%, #6b45c9 46%, #452a86 100%);
+  border-bottom: 2px solid var(--ink);
+}
+.corte-hero-art::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(158deg, rgba(255, 255, 255, 0.22), transparent 42%);
+}
+.corte-hero-art img { width: 94%; height: 94%; object-fit: contain; filter: drop-shadow(0 3px 5px rgba(36, 28, 46, 0.45)); }
+.corte-hero-emoji { font-size: 4rem; filter: drop-shadow(0 2px 3px rgba(36, 28, 46, 0.4)); }
+.corte-hero-body { display: flex; flex-direction: column; gap: 4px; padding: 11px 12px 12px; flex: 1; }
+.corte-hero-nome { font-family: var(--display); font-weight: 700; font-size: 1rem; line-height: 1.1; }
+.corte-hero-desc { font-size: 0.72rem; color: var(--ink-soft); line-height: 1.3; flex: 1; }
+.corte-papel { font-size: 0.72rem; color: var(--turq-esc); font-weight: 700; }
+.corte-recrutar-btn {
+  margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--display); font-weight: 700; font-size: 0.9rem;
+  background: linear-gradient(180deg, var(--dourado), var(--dourado-esc)); color: var(--ink);
+  border: 2px solid var(--ink); border-radius: 12px; padding: 9px; cursor: pointer;
+  box-shadow: 0 3px 0 var(--dourado-esc);
+}
+.corte-recrutar-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 var(--dourado-esc); }
+.corte-recrutar-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.5); }
+.corte-preco { font-variant-numeric: tabular-nums; }
+
 .corte-reroll {
-  margin-top: 10px; width: 100%; font-family: var(--display); font-weight: 600; font-size: 0.82rem;
+  margin-top: 4px; width: 100%; font-family: var(--display); font-weight: 600; font-size: 0.82rem;
   background: var(--papel-2); color: var(--ink); border: 2px dashed var(--ink);
-  border-radius: 10px; padding: 8px; cursor: pointer;
+  border-radius: 12px; padding: 9px; cursor: pointer;
 }
-.corte-reroll:disabled { opacity: 0.45; cursor: not-allowed; }
-.corte-vazio { font-size: 0.85rem; color: var(--ink-soft); text-align: center; padding: 8px; }
+.corte-reroll:active:not(:disabled) { transform: translateY(2px); }
+.corte-reroll:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Sua Corte — tira horizontal de campeões recrutados */
+.corte-roster-sec { margin-top: 6px; }
+.corte-roster { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; }
+.corte-champ {
+  flex: 0 0 118px; display: flex; flex-direction: column; gap: 5px;
+  border: 2px solid var(--ink); border-radius: 14px; padding: 8px; background: var(--papel);
+  box-shadow: 0 3px 0 var(--papel-3);
+}
+.corte-champ-art {
+  position: relative; aspect-ratio: 1 / 1; border-radius: 10px; overflow: hidden;
+  border: 2px solid var(--ink);
+  background: radial-gradient(circle at 50% 34%, #9a72f0, #452a86);
+  display: grid; place-items: center;
+}
+.corte-champ-art img { width: 94%; height: 94%; object-fit: contain; }
+.corte-champ-emoji { font-size: 2.4rem; }
+.corte-nivel {
+  position: absolute; top: 4px; right: 4px;
+  font-family: var(--display); font-weight: 700; font-size: 0.58rem; color: var(--ink);
+  background: var(--dourado); border: 1.5px solid var(--ink); border-radius: 999px; padding: 1px 6px;
+  text-transform: uppercase; letter-spacing: 0.03em;
+}
+.corte-champ-nome { font-family: var(--display); font-weight: 700; font-size: 0.78rem; line-height: 1.05; }
+.corte-champ-buff { font-size: 0.66rem; color: var(--turq-esc); font-weight: 700; min-height: 1.1em; }
+.corte-up-btn {
+  margin-top: auto; font-family: var(--display); font-weight: 700; font-size: 0.72rem;
+  background: var(--dourado); color: var(--ink); border: 2px solid var(--ink);
+  border-radius: 9px; padding: 6px; cursor: pointer; box-shadow: 0 2px 0 var(--dourado-esc);
+}
+.corte-up-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 0 0 var(--dourado-esc); }
+.corte-up-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.4); }
+
+.corte-vazio {
+  font-size: 0.9rem; color: var(--ink-soft); text-align: center; line-height: 1.4;
+  padding: 22px 12px; margin: 12px 0;
+  background: linear-gradient(180deg, #f3ecff, var(--papel));
+  border: 2px dashed var(--ink); border-radius: 14px;
+}
 
 /* Modal de confirmação obrigatório (§6): perde/mantém + coroas que entram + multiplicador antes→depois. */
 .modal-dinastia { max-width: 420px; }
