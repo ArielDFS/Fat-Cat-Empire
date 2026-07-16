@@ -30,8 +30,17 @@ _Avoid_: mapa, fase, level, cenário.
 
 **Prédio**:
 Uma estrutura **fixa**, desbloqueada uma única vez, que hospeda **um tipo de gato**. É o *lugar*,
-não a unidade que se multiplica. Ex.: Caixa de Papelão, Barraca de Peixe.
+não a unidade que se multiplica. Ex.: Caixa de Papelão, Barraca de Peixe. Prédios se destravam em
+**cadeia**: comprar o 1º gato de um Prédio revela o próximo.
 _Avoid_: negócio, empresa, estação, slot.
+
+**Obra**:
+O **prédio-virada** de uma Era: um Prédio produtor normal (hospeda gatos, tem custo/produção) que é
+o **último da cadeia** daquela Era. **Construí-la pela primeira vez** (o 1º gasto de peixes nela) é o
+**ato que vira a Era** — troca o mundo, dá a fanfarra e revela o 1º Prédio da Era seguinte. Ex.:
+Prefeitura (vira para a Vila), Centro de Pesquisas Espaciais (vira para a Galáxia). "Obra" = a grande
+construção civil que inaugura a era, não obra de arte. Ver GAME_DESIGN §4.5.
+_Avoid_: monumento (a Obra **produz**), marco (isso é o marco de gatos, §3.4), landmark.
 
 **Gato**:
 O **trabalhador anônimo** de um Prédio — a unidade que o jogador compra em **quantidade** e que
@@ -73,6 +82,20 @@ Habilidade passiva que aumenta o **poder de clique** (efeito **global**, apesar 
 melhor ausente". É um dos motores da **Build ativa**. Ver [ADR-0002](docs/adr/0002-passiva-de-clique.md).
 _Avoid_: buff de clique, upgrade de clique.
 
+**Habilidade global**:
+Melhoria **permanente** de efeito **global** (multiplica a produção ou o clique do jogo inteiro),
+que **sobrevive à Nova Dinastia** — a única categoria de habilidade que atravessa a Run. Não mora
+num Prédio nem se compra com Peixes: é **concedida** por um marco do meta-jogo. Distinta da Passiva
+de Clique (que é global no *efeito* mas é de Prédio, comprável e zera na Dinastia). Ver GAME_DESIGN §3.6.
+_Avoid_: habilidade passiva (essa é de Prédio e zera), buff global.
+
+**Selo Imperial**:
+A primeira **Habilidade global** — o **carimbo imperial** estampado na Caixa de Papelão ao fundar a
+**1ª Nova Dinastia**. Concede **produção global ×1,5**, permanente. É a primeira recompensa que não é
+Coroa a atravessar a Dinastia (por isso o §6 reseta tudo *exceto* o Selo). "Selo" = sinete/carimbo do
+império, não vedação nem selo postal. Ver GAME_DESIGN §3.6.
+_Avoid_: selo de vedação, carimbo (use "Selo Imperial"), bônus de prestígio (isso é a Coroa).
+
 ## Recursos
 
 **Peixe**:
@@ -98,8 +121,8 @@ O ato de **prestígio**: reseta a run em troca de Coroas Felinas e um bônus glo
 _Avoid_: prestígio (use "Nova Dinastia" para o ato; "prestígio" só como termo de gênero), rebirth, reset.
 
 **Era**:
-O **grau de escala civilizacional** da run — um degrau que o império **sobe de escala** conforme o
-lifetime de peixes cresce: **beco → vila → cidade → metrópole → império → galáxia** (não são sabores
+O **grau de escala civilizacional** da run — um degrau que o império **sobe** ao **construir a Obra**
+que inaugura a próxima Era: **beco → vila → cidade → metrópole → império → galáxia** (não são sabores
 do mesmo beco). Cada Era tem uma **escala** (o degrau legível) e um **nome** próprio, o trocadilho
 (Beco Esquecido, Vila do Ronrom, Gatópolis, Miadópolis, Império dos Bigodes, Via-Láctea Felina).
 Cruzar uma Era dá **título**, um **empurrão de peixes** (lump), a **fanfarra** e **troca o mundo de

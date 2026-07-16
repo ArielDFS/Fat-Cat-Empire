@@ -96,6 +96,11 @@ o jogador compra **gatos** dentro dele. Os prédios diferem pela **produção po
 > Os 4 prédios acima são **pilotos** — o plano é acrescentar muitos mais em ordem de custo crescente
 > (o Píer, ex-Banco do Atum, não é o teto da escada). Ver ART_STYLE §2C.
 
+> **⚠️ Modelo de desbloqueio revisto (§4.6.9, ADR-0003):** o "desbloqueio por peixes acumulados
+> (`lifetime`)" acima é o modelo **atual do slice**. O alvo é **cadeia de compra** (comprar o 1º gato
+> revela o próximo prédio) — sem `lifetime`. A coluna "Desbloqueio (peixes acum.)" cai na migração; o
+> gate passa a ser o custo do 1º gato. Estrutura de endgame: 6 Eras × 6 prédios (o 6º é a **Obra**).
+
 ### 3.4 Marcos e Habilidades passivas
 
 A cada marco de gatos **do mesmo prédio**, **destrava uma Habilidade passiva** daquele prédio — uma
@@ -171,9 +176,19 @@ Exemplos (ajustáveis): **Maré de Peixe** (Barraca — clique ×5 por 15s, cool
 
 ### 3.6 Habilidades globais
 
-Poucas, especiais, que afetam tudo:
-- **Selo Imperial na Caixa** — destravada na 1ª Nova Dinastia: **produção global ×1,5** (permanente).
-- **Carinho Ergonômico** — melhoria do poder de clique base (eixo ativo).
+Poucas, especiais, que afetam tudo. Diferente das Passivas de Prédio (§3.4), a Habilidade global
+**não se compra com peixes nem mora num prédio**: é **concedida** por um marco do meta-jogo e
+**sobrevive à Nova Dinastia** (§6) — a única categoria de habilidade que atravessa a Run.
+
+- **Selo Imperial na Caixa** — **concedido** (não comprado) na **1ª Nova Dinastia**: **produção
+  global ×1,5**, permanente. Entra como fator multiplicativo em `habilidades_globais` (§3.7), **fora**
+  do colchete das coroas. Por ser de **produção**: (a) **rende offline** (§7) — ao contrário da Passiva
+  de Clique — e (b) **levanta o clique junto**, de graça, porque o clique é uma fração da produção
+  (§3.5); não é caso especial, cai da fórmula. **Modelado como um flag** no slice (só há uma global);
+  vira `string[]` se um dia houver várias. O ×1,5 **nunca empilha** entre Dinastias — quem cresce por
+  Dinastia é a Coroa.
+- **Carinho Ergonômico** — melhoria do poder de clique base (eixo ativo). **Backlog** — sem gatilho
+  definido; entra numa sessão futura.
 
 ### 3.7 Fórmula final de produção
 
@@ -209,7 +224,12 @@ um dos eixos.
 
 ---
 
-## 4.5 Eras do Império — o eixo civilizacional `[decisão v0.3]`
+## 4.5 Eras do Império — o eixo civilizacional `[decisão v0.3 — driver revisto pela v0.6]`
+
+> **⚠️ Revisto (§4.6.9, ADR-0003):** "Era = função pura de `lifetime`" **caiu**. A Era passa a virar
+> ao **construir uma Obra** (o prédio-virada da Era) e vira **estado guardado**, não derivado do
+> `lifetime`. O texto abaixo descreve o **modelo atual do slice** (dirigido por `lifetime`), que roda
+> até a sessão de migração. Título, mundo bespoke e fanfarra sobrevivem; só o **gatilho** muda.
 
 **Problema que resolve:** desbloquear prédios um após o outro dá progressão, mas não dá a *sensação
 de civilização evoluindo*. As **Eras** são essa camada — **sem** adicionar uma economia paralela
@@ -328,6 +348,10 @@ da caixa de papelão ao intergalático. Toda decisão abaixo serve a isso.
   - É o instinto que o slice já teve ("Miaurcado puxa idle, Píer puxa clique", §3.4).
 
 ### 4.6.5 Era = multiplicador global temporário + fundo bespoke `[revê o lump do §4.5]`
+> **Gatilho revisto (§4.6.9, ADR-0003):** o que dispara "cruzar Era" deixa de ser o `lifetime` cruzar
+> um limiar e passa a ser **construir a Obra** daquela Era. Os efeitos abaixo (multiplicador, mundo,
+> desbloqueio das lanes) seguem — só a **causa** muda. "Desbloqueia as próximas lanes" agora é
+> **emergente**: a 1ª compra da Obra revela o 1º prédio da Era seguinte (cadeia de compra).
 - No jogo completo, cruzar Era dá: **multiplicador global** (temporário, **perdido** na Dinastia) +
   **novo fundo de mundo** (ver visual abaixo) + **desbloqueia as próximas lanes** + **destrava faixas
   do pool de Lendários** (§4.6.7) + escala o **Legado** ganho.
@@ -385,6 +409,36 @@ Não resolver de improviso — merecem grelha própria:
   **comprados** (gasto). Reconciliar: Coroas viram gastáveis? Legado é derivado das Coroas? Decidir
   na sessão dedicada.
 
+### 4.6.9 A espinha de progressão: Obras e cadeia de compra `[decisão v0.6, ADR-0003]`
+
+**Revê o §4.5 (Era = função pura de `lifetime`), a base da Coroa do §6 e o gatilho do §4.6.5.** O
+`lifetime` **deixa de dirigir qualquer mecânica** — a progressão passa a ser conduzida por **atos
+concretos e visíveis** (construir prédios), não por um odômetro invisível. Ver [ADR-0003](docs/adr/0003-progressao-por-obras.md).
+**Decidido em grelha; ainda NÃO implementado** — o slice roda no modelo `lifetime` até a sessão de
+migração. Este é o mapa dessa migração.
+
+1. **Cadeia de compra.** Comprar o **1º gato** de um prédio (1º gasto de peixes nele) **revela o
+   próximo prédio**. O gate é o **custo crescente** do 1º gato — que já exige produção acumulada, então
+   se auto-pacinga sem `lifetime`. Regra **única** pra todos os prédios.
+2. **Obra = o prédio-virada.** Cada Era é uma cadeia que **termina numa Obra** (CONTEXT): um prédio
+   **produtor normal** (hospeda gatos, tem custo/produção) cuja **1ª construção vira a Era** — troca o
+   mundo (§4.6.5), dá a fanfarra e revela o 1º prédio da Era seguinte. É naturalmente o prédio **mais
+   caro** da Era, então o "juntar pra erguê-la" já é o peso da virada. Ex.: Prefeitura (→ Vila),
+   Centro de Pesquisas Espaciais (→ Galáxia).
+3. **Era vira estado guardado**, não derivada do `lifetime`: a Era atual = quantas Obras foram
+   construídas. Persistida no save (o `predioDesbloqueado`/`nivelDaEra` derivados do `lifetime` saem).
+4. **Estrutura de endgame: 6 Eras × 6 prédios = 36.** As 6 escalas nomeadas (beco → galáxia), cada
+   uma com **6 prédios** (o 6º é a Obra). O "6 por Era" é um **alvo extensível** — a fórmula de curva
+   (§4.6.3) tem que aguentar **inserir prédios no meio** de uma Era. Esticar a escada (mais Eras, §4.5)
+   segue como alavanca pós-lançamento.
+5. **Coroa escala pelos peixes gastos na run** (§6): `sqrt(gastos / DIVISOR)`, não mais `lifetime`.
+   `gastos` = tudo que sai do saldo (gatos + passivas + Obras). Como `gastos ≈ produção`, o ritmo do
+   §8 aproximadamente sobrevive. (O **Legado** do §4.6.6, moeda do endgame, segue por Era — moeda distinta.)
+6. **`lifetime` sobrevive só como estatística de vitrine** (exibido, dirige zero mecânicas).
+
+> **Por que "Obra" e não "Marco":** "marco" já é o marco de *gatos* que abre passivas (§3.4). A Obra
+> é o prédio-virada — outro conceito. Ver CONTEXT.
+
 ---
 
 ## 5. Evento aleatório (1)
@@ -412,8 +466,24 @@ coroas_ganhas = floor( sqrt( peixes_lifetime_da_run / PRESTIGE_DIVISOR ) )
 | 25.000.000 | 5 | +10% |
 | 100.000.000 | 10 | +20% |
 
-**Reseta:** peixes, gatos, prédios desbloqueados, habilidades compradas (exceto Selo Imperial).
-**Mantém:** coroas, bônus global, conquistas, estatísticas vitalícias.
+A **base da coroa é o `lifetime`** (produção genuína da run) — que **exclui os lumps de Era** (§4.5,
+por decisão): o presente comemorativo não infla o prestígio, do mesmo jeito que não empurra Era de
+graça. Coroa mede mérito; lump é peixe pra gastar.
+
+> **⚠️ Base revista (§4.6.9, ADR-0003):** com o `lifetime` removido como driver, a Coroa passa a
+> escalar pelos **peixes gastos na run** — `coroas = floor(sqrt(gastos / PRESTIGE_DIVISOR))`, onde
+> `gastos` = tudo que sai do saldo (gatos + passivas + Obras). Como `gastos ≈ produção`, os alvos do
+> §8 aproximadamente sobrevivem e o `CROWN_BONUS` talvez nem mude. A preocupação "lump não pode inflar
+> o `lifetime`" **evapora** (não há mais `lifetime`). Modelo **atual** (base `lifetime`) roda até a
+> migração. A tabela abaixo passa a ler "peixes **gastos** na run" na 1ª coluna.
+
+**Reseta:** peixes, gatos, prédios desbloqueados, habilidades compradas (exceto Selo Imperial), Era
+(volta ao Beco). Tudo isso **cai em cascata de `lifetime → 0`**: prédios re-travam e a Era volta à I
+(Beco) porque ambos derivam do lifetime — não há flags separados a zerar. As coroas ganhas são
+calculadas **antes** do reset (do lifetime da run que está acabando). O relógio da run (`runInicioTs`,
+base da conquista "Dinastia Descartável", §12) é **re-armado** no ato.
+**Mantém:** coroas, bônus global, **Selo Imperial** (concedido na 1ª Dinastia, mantido nas
+seguintes), conquistas, estatísticas vitalícias.
 
 As **Coroas persistem como contagem** (não são "gastas") — dão bônus passivo hoje e, no endgame,
 serão também a moeda dos **Artefatos** (§13). Não modele coroa como recurso consumível.
@@ -592,3 +662,6 @@ animações de trabalho e celebração · migração para Phaser/Canvas se as la
 | 2026-07-15 | **Eras = escada de escala inteira, não "Eras do Beco"** | Direção do usuário: as Eras **sobem de escala** (beco → vila → cidade → metrópole → império → galáxia), não são seis sabores do beco. Puxa **Miadópolis e o nível galáctico do §13 pra dentro da escada do slice**; o backlog vira "esticar a escada" (mais Eras *entre* estas), não "distritos além do Beco". `Era` ganha campo `escala` (degrau legível) separado de `nome` (o trocadilho). Escada final: Beco Esquecido · Vila do Ronrom · Gatópolis · Miadópolis · Império dos Bigodes · Via-Láctea Felina. Revê §2, §4.5, §13. Prompts dos 5 céus entregues (bloco de mundo de fundo, variação do §5.3 do ART_STYLE) |
 | 2026-07-15 | **Eras — arte ligada + polimento da fanfarra** | Os **5 céus das Eras 2–6** gerados (variam a hora do dia: amanhecer → dia → entardecer → crepúsculo → cósmico) e ligados no `ui/eraArt.ts` (arquivos vieram com prefixo `cat_*`, mapeados em código). Império **refeito** pra capital futurista planetária (não regredir a tecnologia depois da Metrópole — lição no ART_STYLE §5.5). **Scrim** no `.skybg` (degradê escuro topo/base) pra a UI clara ler sobre céus claros. **Fanfarra de troca de Era** ganhou VFX **em código** (raios dourados girando + burst de moedas/peixes/brilhos, reusando sprites — zero asset novo), memoizado por Era e respeitando `prefers-reduced-motion`. Só código/arte, sem mudança de regra |
 | 2026-07-15 | **Mudança visual de prédio por marco — descontinuada (documentando decisão de grelha antiga)** | Registro de uma decisão de grelha que nunca tinha sido escrita: os marcos **não** mudam mais o sprite do prédio (o antigo "nível 1→2 em 25 gatos, 2→3 em 100" saiu), junto com os **"3 estágios do Beco"**. A progressão visível (pilar §1) passa a ser **troca de mundo por Era** (§4.5/§4.6.5) + enxame enchendo a lane. Motivo: sprites por-nível são caros e de baixo retorno no modelo empilhado (§4.6.4). Reconcilia §1, §2, §3.4, ART_STYLE §7, CONTEXT e README — que ainda descreviam a feature como ativa. O marco hoje faz **só** abrir a passiva |
+| 2026-07-15 | **Nova Dinastia (passo 7) — grelha de prestígio** | Sessão de grelha do prestígio do slice (domain já pronto/testado; a grelha resolveu a *cola*). **Selo Imperial** concretizado: 1ª Habilidade global (§3.6), concedido na 1ª Dinastia, produção ×1,5, sobrevive ao reset; modelado como **flag boolean** no estado + **fator global opaco** no domain (`production` recebe o fator, sem saber que é "Selo"). **Reset** definido campo a campo, em cascata de `lifetime→0` (prédios re-travam, Era→Beco); coroa lê o `lifetime` (produção genuína, **exclui lumps de Era**), calculada antes do reset; Selo **não empilha**. **`runInicioTs`** plantado (relógio de parede) pra a conquista "Dinastia Descartável" — a *avaliação* fica no passo 8. Save ganha `seloImperial?` e `runInicioTs?` como **campos opcionais sem bump** (padrão do `eraMaisAlta`). Tela de confirmação enxuta (reusa `.modal`, mostra perde/mantém/coroas/multiplicador via `resumoNovaDinastia`); troca-pro-Beco é a comemoração; linha do Selo só na estreia. Botão no HUD, escondido até ≥1 coroa (placement provisório). CONTEXT: +**Selo Imperial**, +**Habilidade global** |
+| 2026-07-15 | **Nova Dinastia — Selo visível + contador de Dinastias** | Ajuste de feedback após teste: (1) o Selo Imperial agora **aparece carimbado na placa da Caixa de Papelão** (sinete dourado com o gato-rei) quando concedido — antes o ×1,5 valia mas era invisível na tela principal, contrariando a promessa do modal; (2) novo estado permanente **`dinastias`** (contagem de fundações — não derivável das coroas, que crescem por valor), exibido no HUD após a 1ª e persistido como campo opcional sem bump. Só UI + um contador; nenhuma regra de economia muda |
+| 2026-07-16 | **v0.6 — progressão por Obras (cadeia de compra), `lifetime` removido como driver ([ADR-0003](docs/adr/0003-progressao-por-obras.md))** | Grelha da espinha de progressão até o endgame. **Revê §4.5 e a base da Coroa (§6), recém-implementadas.** O `lifetime` deixa de dirigir mecânica (vira estatística de vitrine). **Cadeia de compra:** 1º gato comprado revela o próximo prédio (gate = custo crescente, auto-pacing). **Obra** (termo novo no CONTEXT): prédio-virada produtor, último da cadeia de cada Era; construí-la vira a Era (mundo + fanfarra) e revela o 1º prédio da seguinte. **Era vira estado guardado** (Obras construídas), não derivada do `lifetime`. **Coroa escala por peixes gastos na run** (`sqrt(gastos/DIV)`), não `lifetime`. **Estrutura de endgame: 6 Eras × 6 prédios = 36** (o 6º de cada Era é a Obra), "6 por Era" extensível. Adiciona §4.6.9; notas de revisão em §3.3/§4.5/§4.6.5/§6; CONTEXT: +**Obra**, "Era" corrigida. **Decisão documentada; implementação (migração de save + estado novo) é sessão dedicada** — o slice roda no modelo `lifetime` até lá |

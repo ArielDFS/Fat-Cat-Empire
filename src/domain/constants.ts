@@ -26,3 +26,10 @@ export const PRESTIGE_DIVISOR = 1e6;
 
 /** Bônus de produção global por coroa (+2%). */
 export const CROWN_BONUS = 0.02;
+
+/**
+ * Multiplicador de produção global do Selo Imperial (§3.6, não §3.1) — concedido na 1ª Nova Dinastia,
+ * permanente. Entra como fator multiplicativo em `habilidades_globais` (§3.7), fora do colchete das
+ * coroas. Balanceamento (§8), não `[TRAVADO]`.
+ */
+export const SELO_IMPERIAL_MULT = 1.5;

@@ -14,7 +14,10 @@ passivas** já funcionam. As passivas vêm em **dois sabores** que competem pelo
 offline) — 4 arquétipos (§3.4). Arte em **dois tracks** (mundo chapado + personagens detalhados) —
 gatos, lanes, logo e HUD "claro imperial" já na tela. As **Eras do Império** (§4.5) estão prontas:
 6 graus de escala (beco → galáxia), cada um trocando o **mundo de fundo** ao cruzar, com lump de
-peixes e fanfarra. Falta as **Habilidades ativas** de burst (§3.5) e o **prestígio** (§6).
+peixes e fanfarra. O **prestígio** (§6) já funciona: **Nova Dinastia** reseta a run em cascata,
+credita **Coroas** e concede o **Selo Imperial** (produção global ×1,5 permanente) na estreia, com
+tela de confirmação obrigatória. Falta o eixo *clicker* completar — as **Habilidades ativas** de
+burst (§3.5) — além do **Festival da Sardinha** e das **conquistas** (§8 no roteiro).
 
 > Cortados em grelha (não são pendências): o **estágio visual do prédio por marco** e os **3 estágios
 > do Beco** — a progressão visível é a troca de mundo por Era + o enxame enchendo a lane.

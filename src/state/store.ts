@@ -23,6 +23,8 @@ import { producaoPorSegundo } from "../domain/production";
 import type { PredioProdutor } from "../domain/production";
 import { calcularGanhoOffline } from "../domain/offline";
 import type { GanhoOffline } from "../domain/offline";
+import { coroasGanhasNaRun } from "../domain/prestige";
+import { SELO_IMPERIAL_MULT } from "../domain/constants";
 import { nivelDaEra, lumpDaEra } from "../domain/era";
 import { LIMIARES, LUMP_SEGUNDOS, LUMP_PISO, eraPorNivel } from "../data/eras";
 import type { Era } from "../data/eras";
@@ -138,10 +140,16 @@ export interface GameState {
   lifetime: number;
   coroas: number;
   gatos: Record<string, number>;
-  /** Ids das Habilidades passivas já compradas na run (§3.4). Reseta na Nova Dinastia (futuro). */
+  /** Ids das Habilidades passivas já compradas na run (§3.4). Reseta na Nova Dinastia. */
   habilidades: string[];
   /** Era mais alta já atingida na run (§4.5). Persistida (inteiro) para não repagar o lump. */
   eraMaisAlta: number;
+  /** Selo Imperial concedido? (§3.6) Habilidade global — produção ×1,5, permanente, sobrevive à Dinastia. */
+  seloImperial: boolean;
+  /** Quantas Nova Dinastias já foram fundadas (§6). Permanente — não se deriva das coroas (que crescem por valor). */
+  dinastias: number;
+  /** `Date.now()` do início da run atual (§6). Re-armado na Nova Dinastia; base da conquista §12 (passo 8). */
+  runInicioTs: number;
 
   /** Ganho da última ausência, enquanto o modal de retorno está aberto (null = sem modal). */
   ganhoOffline: GanhoOffline | null;
@@ -156,6 +164,8 @@ export interface GameState {
   comprarHabilidade: (abilityId: string) => void;
   /** Um clique manual no peixe grande. */
   clicar: () => void;
+  /** Funda a Nova Dinastia (§6): credita coroas, concede o Selo na estreia, reseta a run. */
+  novaDinastia: () => void;
   /** Avança a produção passiva por `dtSegundos` de tempo real. */
   tick: (dtSegundos: number) => void;
   /** Carrega o save (se houver) e credita a produção offline. Idempotente por sessão. */
@@ -175,6 +185,9 @@ export const useGame = create<GameState>((set, get) => ({
   gatos: gatosZerados(),
   habilidades: [],
   eraMaisAlta: 1,
+  seloImperial: false,
+  dinastias: 0,
+  runInicioTs: Date.now(),
   ganhoOffline: null,
   eraFanfarra: null,
   hidratado: false,
@@ -212,6 +225,30 @@ export const useGame = create<GameState>((set, get) => ({
     set(aplicarGanhoLifetime(s, ganho));
   },
 
+  novaDinastia: () => {
+    const s = get();
+    // A coroa lê o `lifetime` da run que está acabando (produção genuína, exclui lumps de Era §4.5).
+    const coroasGanhas = coroasGanhasNaRun(s.lifetime);
+    if (coroasGanhas < 1) return; // guarda: o botão só aparece com ≥1 coroa, mas a ação também protege
+
+    // Reset em cascata de `lifetime → 0`: prédios re-travam e a Era volta ao Beco (ambos derivam dele).
+    set({
+      peixes: 0,
+      lifetime: 0,
+      gatos: gatosZerados(),
+      habilidades: [],
+      eraMaisAlta: 1,
+      coroas: s.coroas + coroasGanhas, // coroa persiste como contagem (§6)
+      seloImperial: true, // concedido na 1ª Dinastia; idempotente depois (o ×1,5 nunca empilha)
+      dinastias: s.dinastias + 1, // contagem permanente de fundações
+      runInicioTs: Date.now(), // re-arma o relógio da run (§12)
+      ganhoOffline: null,
+      eraFanfarra: null,
+    });
+    // Persiste já: um reload logo após a fundação não deve ressuscitar a run antiga (§6).
+    get().salvar();
+  },
+
   tick: (dtSegundos) => {
     if (dtSegundos <= 0) return;
     const s = get();
@@ -235,6 +272,9 @@ export const useGame = create<GameState>((set, get) => ({
       coroas: save.coroas,
       gatos: normalizarGatos(save.gatos),
       habilidades: normalizarHabilidades(save.habilidades),
+      // O Selo entra no `base` porque o cálculo offline usa `prodPorSegundo(base)`, que já o inclui
+      // no multiplicador global (§3.6: produção ×1,5 rende ausente, ao contrário da Passiva de Clique).
+      seloImperial: save.seloImperial === true,
     };
 
     // A produção que alimenta o offline precisa ser a EFETIVA (com coroas já embutidas),
@@ -255,6 +295,9 @@ export const useGame = create<GameState>((set, get) => ({
       peixes: base.peixes + ganho.peixes,
       lifetime: lifetimeFinal,
       eraMaisAlta: Math.max(eraSalva, nivelDaEra(lifetimeFinal, LIMIARES)),
+      dinastias: save.dinastias ?? 0,
+      // Save antigo sem `runInicioTs` → carimba agora (a run já corria, mas não sabemos desde quando).
+      runInicioTs: save.runInicioTs ?? Date.now(),
       ganhoOffline: ganho.peixes > 0 ? ganho : null,
       hidratado: true,
     });
@@ -269,6 +312,9 @@ export const useGame = create<GameState>((set, get) => ({
       gatos: s.gatos,
       habilidades: s.habilidades,
       eraMaisAlta: s.eraMaisAlta,
+      seloImperial: s.seloImperial,
+      dinastias: s.dinastias,
+      runInicioTs: s.runInicioTs,
     });
   },
 
@@ -287,10 +333,13 @@ export function predioDesbloqueado(b: Building, lifetime: number): boolean {
   return lifetime >= b.desbloqueio;
 }
 
-type EstadoProducao = Pick<GameState, "gatos" | "coroas" | "habilidades">;
+type EstadoProducao = Pick<GameState, "gatos" | "coroas" | "habilidades" | "seloImperial">;
 
 export function prodPorSegundo(s: EstadoProducao): number {
-  return producaoPorSegundo(produtores(s.gatos, s.habilidades), s.coroas);
+  // O Selo Imperial é a única Habilidade global do slice (§3.6): fator ×1,5 em `habilidades_globais`
+  // (§3.7), multiplicativo por fora do colchete das coroas. `domain/production` recebe o fator opaco.
+  const habilidadesGlobaisMult = s.seloImperial ? SELO_IMPERIAL_MULT : 1;
+  return producaoPorSegundo(produtores(s.gatos, s.habilidades), s.coroas, habilidadesGlobaisMult);
 }
 
 export function poderDeClique(s: EstadoProducao): number {

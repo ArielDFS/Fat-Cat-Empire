@@ -394,6 +394,81 @@ button:focus-visible { outline: 3px solid var(--turq-esc); outline-offset: 2px; 
 }
 .modal-ok:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--dourado-esc); }
 
+/* ---------- Nova Dinastia (§6) ---------- */
+/* Botão do HUD: só existe no DOM quando a run já vale ≥1 coroa; pulsa dourado pra chamar atenção. */
+.dynasty-btn {
+  display: flex; align-items: center; gap: 9px;
+  background: linear-gradient(180deg, var(--dourado), var(--dourado-esc));
+  border: 2px solid var(--ink); border-radius: 14px;
+  padding: 5px 14px 5px 8px; cursor: pointer; color: var(--ink);
+  box-shadow: 0 3px 0 var(--dourado-esc);
+  animation: dynastyPulse 1.8s ease-in-out infinite;
+}
+.dynasty-btn:active { transform: translateY(3px); box-shadow: 0 0 0 var(--dourado-esc); }
+.dynasty-ico { font-size: 1.3rem; filter: drop-shadow(0 1px 1px rgba(36, 28, 46, 0.4)); }
+.dynasty-txt { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.05; }
+.dynasty-txt b { font-family: var(--display); font-weight: 700; font-size: 0.95rem; }
+.dynasty-txt span { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em; }
+@keyframes dynastyPulse {
+  0%, 100% { box-shadow: 0 3px 0 var(--dourado-esc), 0 0 0 rgba(255, 201, 60, 0); }
+  50% { box-shadow: 0 3px 0 var(--dourado-esc), 0 0 16px rgba(255, 201, 60, 0.75); }
+}
+
+/* Modal de confirmação obrigatório (§6): perde/mantém + coroas que entram + multiplicador antes→depois. */
+.modal-dinastia { max-width: 420px; }
+.dinastia-cols { display: flex; gap: 12px; margin: 14px 0; text-align: left; }
+.dinastia-col { flex: 1; border: 2px solid var(--ink); border-radius: 12px; padding: 10px 12px; }
+.dinastia-col.perde { background: #fdeceb; }
+.dinastia-col.mantem { background: #eafaf4; }
+.dinastia-col-lab {
+  display: block; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.07em;
+  font-weight: 700; margin-bottom: 6px; color: var(--ink-soft);
+}
+.dinastia-col ul { margin: 0; padding-left: 16px; font-size: 0.82rem; line-height: 1.5; }
+.dinastia-col.perde ul { color: var(--laranja-esc); }
+.dinastia-col.mantem ul { color: var(--turq-esc); }
+.dinastia-ganho {
+  font-family: var(--display); font-size: 1.5rem; font-weight: 700;
+  color: var(--dourado-esc) !important; margin: 10px 0 4px;
+}
+.dinastia-ganho span { font-family: var(--body); font-size: 0.8rem; color: var(--ink-soft); font-weight: 400; }
+.dinastia-mult { font-size: 0.88rem !important; }
+.dinastia-mult b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.dinastia-selo {
+  font-size: 0.82rem !important; background: var(--creme);
+  border: 1.5px dashed var(--dourado-esc); border-radius: 10px; padding: 8px 10px;
+}
+.dinastia-acoes { display: flex; gap: 10px; margin-top: 14px; }
+.dinastia-btn-cancel, .dinastia-btn-go {
+  flex: 1; font-family: var(--display); font-weight: 600; border: 2px solid var(--ink);
+  border-radius: 12px; padding: 9px 16px; cursor: pointer;
+}
+.dinastia-btn-cancel { background: var(--papel-2); color: var(--ink); box-shadow: 0 3px 0 var(--papel-3); }
+.dinastia-btn-go { background: var(--dourado); color: var(--ink); box-shadow: 0 4px 0 var(--dourado-esc); }
+.dinastia-btn-cancel:active, .dinastia-btn-go:active { transform: translateY(3px); box-shadow: none; }
+
+/* Contador de Dinastias no HUD (aparece após a 1ª fundação). */
+.res-seal { background: linear-gradient(180deg, #ffd76a, var(--dourado-esc)); }
+
+/* Selo Imperial carimbado na placa da Caixa de Papelão (§3.6): sinete dourado com o gato-rei. */
+.lane-selo {
+  position: absolute; bottom: 6px; right: 6px; z-index: 3;
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  background: radial-gradient(circle at 35% 30%, #ffe8a3, var(--dourado) 55%, var(--dourado-esc));
+  border: 2px solid var(--ink);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), inset 0 0 0 2px rgba(255, 255, 255, 0.28);
+  animation: seloPop 0.5s ease-out;
+}
+.lane-selo img {
+  width: 23px; height: 23px; object-fit: contain; -webkit-user-drag: none;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
+}
+@keyframes seloPop {
+  0% { transform: scale(0) rotate(-30deg); }
+  70% { transform: scale(1.15) rotate(6deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
 /* ---------- Rodapé ---------- */
 .foot { margin-top: 18px; font-size: 0.74rem; color: var(--ink-soft); line-height: 1.5; }
 
@@ -410,6 +485,8 @@ button:focus-visible { outline: 3px solid var(--turq-esc); outline-offset: 2px; 
   .up { animation: none; }
   .pop { animation-name: popFade; }
   .bigfish img, .buy { transition: none; }
+  .dynasty-btn { animation: none; }
+  .lane-selo { animation: none; }
 }
 
 /* ---------- Textos claros sobre o mundo escuro do Beco (§4.6.5) ----------

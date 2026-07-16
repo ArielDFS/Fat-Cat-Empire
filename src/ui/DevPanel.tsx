@@ -12,6 +12,7 @@ import type { CSSProperties } from "react";
 import { useGame, aplicarGanhoLifetime } from "../state/store";
 import { BUILDINGS } from "../data/buildings";
 import { LIMIARES, eraPorNivel } from "../data/eras";
+import { PRESTIGE_DIVISOR } from "../domain/constants";
 import { limparSave } from "../state/save";
 
 /** Marco mais alto de qualquer prédio — atingi-lo abre todas as passivas daquele prédio (§3.4). */
@@ -70,6 +71,15 @@ function cruzarProximaEra() {
   });
 }
 
+/**
+ * Empurra o `lifetime` até já valer N coroas (§6) — testa o botão de Nova Dinastia sem jogar 1h.
+ * Inverte `floor(sqrt(lifetime/DIV))`: lifetime = N² × DIV.
+ */
+function darLifetimeParaCoroas(n: number) {
+  const alvo = n * n * PRESTIGE_DIVISOR;
+  useGame.setState((s) => ({ lifetime: Math.max(s.lifetime, alvo) }));
+}
+
 /** Zera a run (inclui o save) — testa progressão do zero. */
 function zerarRun() {
   limparSave();
@@ -80,6 +90,9 @@ function zerarRun() {
     gatos: gatosZerados(),
     habilidades: [],
     eraMaisAlta: 1,
+    seloImperial: false,
+    dinastias: 0,
+    runInicioTs: Date.now(),
     ganhoOffline: null,
     eraFanfarra: null,
   });
@@ -131,6 +144,8 @@ export function DevPanel() {
   const lifetime = useGame((s) => s.lifetime);
   const coroas = useGame((s) => s.coroas);
   const eraMaisAlta = useGame((s) => s.eraMaisAlta);
+  const seloImperial = useGame((s) => s.seloImperial);
+  const dinastias = useGame((s) => s.dinastias);
 
   if (!aberto) {
     return (
@@ -184,6 +199,12 @@ export function DevPanel() {
         Cruzar próxima Era (ao vivo)
       </button>
 
+      <span style={S.label}>Dinastia</span>
+      <div style={S.row}>
+        <button style={S.btn} onClick={() => darLifetimeParaCoroas(1)}>lifetime → 1 👑</button>
+        <button style={S.btn} onClick={() => darLifetimeParaCoroas(5)}>→ 5 👑</button>
+      </div>
+
       <span style={S.label}>Reset</span>
       <button style={S.btnDanger} onClick={zerarRun}>Zerar run + save</button>
 
@@ -192,6 +213,8 @@ export function DevPanel() {
         {" · "}👑 {coroas}
         <br />lifetime {lifetime.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
         <br />Era {eraMaisAlta} — {eraPorNivel(eraMaisAlta).nome}
+        {seloImperial ? " · 🏅 Selo" : ""}
+        <br />Dinastias {dinastias}
       </div>
     </div>
   );

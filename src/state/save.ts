@@ -27,6 +27,12 @@ export interface SaveData {
   habilidades: string[];
   /** Era mais alta atingida na run (§4.5). Ausente em saves antigos → derivado do lifetime na store. */
   eraMaisAlta?: number;
+  /** Selo Imperial concedido (§3.6). Ausente em saves antigos → false (prestígio nunca esteve ligado). */
+  seloImperial?: boolean;
+  /** Nº de Nova Dinastias fundadas (§6). Ausente em saves antigos → 0. */
+  dinastias?: number;
+  /** `Date.now()` do início da run atual (§6) — base da conquista "Dinastia Descartável" (§12). Ausente → agora. */
+  runInicioTs?: number;
 }
 
 /** O que a store fornece; `versao` e `ts` são carimbados aqui. */
@@ -72,7 +78,23 @@ export function carregarSave(): SaveData | null {
         ? Math.floor(data.eraMaisAlta)
         : undefined;
 
-    return { ...(data as SaveData), habilidades, eraMaisAlta };
+    // `seloImperial` (§3.6) entrou depois: só aceita `true` explícito; qualquer outra coisa → undefined
+    // (a store trata como false). Nenhum save antigo já concedeu o Selo, então nada se perde.
+    const seloImperial = data.seloImperial === true ? true : undefined;
+
+    // `dinastias` (§6) entrou depois: ausente/ inválido → undefined (a store trata como 0).
+    const dinastias =
+      typeof data.dinastias === "number" && Number.isFinite(data.dinastias) && data.dinastias >= 0
+        ? Math.floor(data.dinastias)
+        : undefined;
+
+    // `runInicioTs` (§6) entrou depois: ausente/ inválido → undefined (a store carimba `agora`).
+    const runInicioTs =
+      typeof data.runInicioTs === "number" && Number.isFinite(data.runInicioTs)
+        ? data.runInicioTs
+        : undefined;
+
+    return { ...(data as SaveData), habilidades, eraMaisAlta, seloImperial, dinastias, runInicioTs };
   } catch {
     return null; // JSON corrompido ou LocalStorage inacessível.
   }

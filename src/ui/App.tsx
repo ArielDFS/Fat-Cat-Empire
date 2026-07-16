@@ -13,6 +13,7 @@ import {
 } from "../state/store";
 import { descreverEfeito, poolDe } from "../data/abilities";
 import { eraPorNivel } from "../data/eras";
+import { podeFundarNovaDinastia, coroasGanhasNaRun, resumoNovaDinastia } from "../domain/prestige";
 import { iniciarAutoSave } from "../state/save";
 import { artOf } from "./buildingArt";
 import { skyDaEra } from "./eraArt";
@@ -120,23 +121,35 @@ export function App() {
   const [pops, setPops] = useState<Pop[]>([]);
   const popId = useRef(0);
 
+  const [confirmandoDinastia, setConfirmandoDinastia] = useState(false);
+
   const peixes = useGame((s) => s.peixes);
   const lifetime = useGame((s) => s.lifetime);
   const coroas = useGame((s) => s.coroas);
   const gatos = useGame((s) => s.gatos);
   const habilidades = useGame((s) => s.habilidades);
   const eraMaisAlta = useGame((s) => s.eraMaisAlta);
+  const seloImperial = useGame((s) => s.seloImperial);
+  const dinastias = useGame((s) => s.dinastias);
   const eraFanfarra = useGame((s) => s.eraFanfarra);
   const clicar = useGame((s) => s.clicar);
   const comprarGatos = useGame((s) => s.comprarGatos);
   const comprarHabilidade = useGame((s) => s.comprarHabilidade);
+  const novaDinastia = useGame((s) => s.novaDinastia);
   const ganhoOffline = useGame((s) => s.ganhoOffline);
   const fecharModalOffline = useGame((s) => s.fecharModalOffline);
   const fecharFanfarra = useGame((s) => s.fecharFanfarra);
 
-  const rate = prodPorSegundo({ gatos, coroas, habilidades });
-  const clickPow = poderDeClique({ gatos, coroas, habilidades });
+  const rate = prodPorSegundo({ gatos, coroas, habilidades, seloImperial });
+  const clickPow = poderDeClique({ gatos, coroas, habilidades, seloImperial });
   const era = eraPorNivel(eraMaisAlta);
+  const podeDinastia = podeFundarNovaDinastia(lifetime);
+  const resumoDinastia = resumoNovaDinastia(lifetime, coroas);
+
+  function confirmarDinastia() {
+    novaDinastia();
+    setConfirmandoDinastia(false);
+  }
 
   // A fanfarra de Era some sozinha depois de FANFARRA_MS (o lump já foi creditado no cruzamento).
   useEffect(() => {
@@ -234,6 +247,69 @@ export function App() {
           </div>
         </div>
       )}
+      {confirmandoDinastia && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={() => setConfirmandoDinastia(false)}
+        >
+          <div
+            className="modal modal-dinastia"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dinastia-titulo"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="dinastia-titulo">Fundar Nova Dinastia? 👑</h2>
+            <p>Você reinicia o império do zero — em troca de Coroas Felinas permanentes.</p>
+            <div className="dinastia-cols">
+              <div className="dinastia-col perde">
+                <span className="dinastia-col-lab">Você perde</span>
+                <ul>
+                  <li>Todos os peixes</li>
+                  <li>Todos os gatos</li>
+                  <li>Prédios e passivas</li>
+                  <li>Volta ao Beco (Era I)</li>
+                </ul>
+              </div>
+              <div className="dinastia-col mantem">
+                <span className="dinastia-col-lab">Você mantém</span>
+                <ul>
+                  <li>Coroas Felinas</li>
+                  <li>Bônus global</li>
+                  {seloImperial && <li>Selo Imperial</li>}
+                  <li>Conquistas</li>
+                </ul>
+              </div>
+            </div>
+            <p className="dinastia-ganho">
+              +{fmt(resumoDinastia.coroasGanhas)} 👑{" "}
+              <span>(total {fmt(resumoDinastia.coroasDepois)})</span>
+            </p>
+            <p className="dinastia-mult">
+              Produção global{" "}
+              <b>×{resumoDinastia.multiplicadorAtual.toFixed(2).replace(".", ",")}</b> →{" "}
+              <b>×{resumoDinastia.multiplicadorDepois.toFixed(2).replace(".", ",")}</b>
+            </p>
+            {!seloImperial && (
+              <p className="dinastia-selo">
+                🏅 E a Caixa de Papelão recebe o <b>Selo Imperial</b>: produção ×1,5, pra sempre.
+              </p>
+            )}
+            <div className="dinastia-acoes">
+              <button
+                className="dinastia-btn-cancel"
+                onClick={() => setConfirmandoDinastia(false)}
+              >
+                Agora não
+              </button>
+              <button className="dinastia-btn-go" onClick={confirmarDinastia} autoFocus>
+                Fundar Dinastia
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <header className="hud">
         <div className="brand">
@@ -253,6 +329,25 @@ export function App() {
             <span className="res-ico res-crown" aria-hidden="true">👑</span>
             <span className="res-txt"><span className="res-lab">Coroas</span><b>{fmt(coroas)}</b></span>
           </div>
+          {dinastias > 0 && (
+            <div className="res res-dinastias" title="Nova Dinastias fundadas (§6)">
+              <span className="res-ico res-seal" aria-hidden="true">🏅</span>
+              <span className="res-txt"><span className="res-lab">Dinastias</span><b>{fmt(dinastias)}</b></span>
+            </div>
+          )}
+          {podeDinastia && (
+            <button
+              className="dynasty-btn"
+              onClick={() => setConfirmandoDinastia(true)}
+              title="Reinicia a run em troca de Coroas permanentes (§6)"
+            >
+              <span className="dynasty-ico" aria-hidden="true">👑</span>
+              <span className="dynasty-txt">
+                <b>Nova Dinastia</b>
+                <span>+{fmt(coroasGanhasNaRun(lifetime))} coroas</span>
+              </span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -315,6 +410,14 @@ export function App() {
                 <div className="lane-plate" title={b.descricao}>
                   <img className="lane-plate-ico" src={art.icone} alt={b.nome} />
                   <span className="lane-plate-nome">{b.nome}</span>
+                  {b.id === "caixa_papelao" && seloImperial && (
+                    <span
+                      className="lane-selo"
+                      title="Selo Imperial — produção global ×1,5, permanente (§3.6)"
+                    >
+                      <img src="/favicon_king.png" alt="Selo Imperial" />
+                    </span>
+                  )}
                 </div>
 
                 <div className="lane-stage">
