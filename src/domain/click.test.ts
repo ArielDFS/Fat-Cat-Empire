@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { CLICK_FACTOR } from "./constants";
-import { peixesPorClique } from "./click";
+import { fatorDaCadenciaClique, proximaCadenciaClique, peixesPorClique } from "./click";
 
 describe("peixesPorClique", () => {
   it("base é uma fração da produção (CLICK_FACTOR), com piso de 1", () => {
@@ -26,5 +26,29 @@ describe("peixesPorClique", () => {
     const pouca = peixesPorClique(1_000);
     const muita = peixesPorClique(1_000_000);
     expect(muita).toBeCloseTo(pouca * 1000); // cresce proporcional à produção
+  });
+});
+
+describe("fatorDaCadenciaClique", () => {
+  it("mantém cliques em ritmo humano integrais e reduz os excedentes suavemente", () => {
+    expect(fatorDaCadenciaClique(0)).toBe(1);
+    expect(fatorDaCadenciaClique(8)).toBe(1);
+    expect(fatorDaCadenciaClique(9)).toBeCloseTo(0.8);
+    expect(fatorDaCadenciaClique(10)).toBeCloseTo(0.64);
+  });
+
+  it("satura o ganho acumulado de uma rajada extrema", () => {
+    const totalEquivalente = Array.from({ length: 1_000 }, (_, i) => fatorDaCadenciaClique(i + 1)).reduce(
+      (total, fator) => total + fator,
+      0,
+    );
+    expect(totalEquivalente).toBeCloseTo(12);
+  });
+});
+
+describe("proximaCadenciaClique", () => {
+  it("drena a cadência na taxa humana antes de registrar o novo clique", () => {
+    expect(proximaCadenciaClique(8, 125)).toBeCloseTo(8); // −1 pelo tempo +1 do clique
+    expect(proximaCadenciaClique(9, 1_000)).toBeCloseTo(2); // a rajada drenou; só sobram os dois cliques recentes
   });
 });

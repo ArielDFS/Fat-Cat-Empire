@@ -16,6 +16,8 @@ import {
 import { buffNoNivel } from "../domain/legendaries";
 import type { TipoEfeitoLendario } from "../domain/legendaries";
 import { descreverEfeito, poolDe } from "../data/abilities";
+import { HABILIDADES_ATIVAS, habilidadeAtivaDoPredio } from "../data/activeAbilities";
+import { estadoDaHabilidadeAtiva } from "../domain/activeAbilities";
 import { SELO_LENDARIO_ID } from "../data/legendaries";
 import { eraPorNivel } from "../data/eras";
 import { podeFundarNovaDinastia, coroasGanhasNaRun, resumoNovaDinastia } from "../domain/prestige";
@@ -94,6 +96,11 @@ function fmtDuracao(segundos: number): string {
   return `${seg} s`;
 }
 
+/** Relógio curto das janelas de Habilidade ativa. */
+function fmtTempoRestante(ms: number): string {
+  return `${Math.max(0, Math.ceil(ms / 1000))} s`;
+}
+
 const QUANTIDADES = [1, 10, 100] as const;
 
 /** Rótulo do papel de um Lendário (§4.6.7). */
@@ -159,6 +166,9 @@ export function App() {
   const gastos = useGame((s) => s.gastos);
   const gatos = useGame((s) => s.gatos);
   const habilidades = useGame((s) => s.habilidades);
+  const efeitosAtivosAte = useGame((s) => s.efeitosAtivosAte);
+  const recargasAtivasAte = useGame((s) => s.recargasAtivasAte);
+  const agoraMs = useGame((s) => s.agoraMs);
   const lendarios = useGame((s) => s.lendarios);
   const ofertaDraft = useGame((s) => s.ofertaDraft);
   const rerollsFeitos = useGame((s) => s.rerollsFeitos);
@@ -167,6 +177,7 @@ export function App() {
   const dinastias = useGame((s) => s.dinastias);
   const eraFanfarra = useGame((s) => s.eraFanfarra);
   const clicar = useGame((s) => s.clicar);
+  const ativarHabilidadeAtiva = useGame((s) => s.ativarHabilidadeAtiva);
   const comprarGatos = useGame((s) => s.comprarGatos);
   const comprarHabilidade = useGame((s) => s.comprarHabilidade);
   const novaDinastia = useGame((s) => s.novaDinastia);
@@ -178,7 +189,15 @@ export function App() {
   const fecharFanfarra = useGame((s) => s.fecharFanfarra);
 
   const rate = prodPorSegundo({ gatos, habilidades, lendarios });
-  const clickPow = poderDeClique({ gatos, habilidades, lendarios });
+  const clickPow = poderDeClique({ gatos, habilidades, lendarios, efeitosAtivosAte, agoraMs });
+  const habilidadeEmBurst = HABILIDADES_ATIVAS.find(
+    (habilidade) =>
+      estadoDaHabilidadeAtiva(
+        efeitosAtivosAte[habilidade.id],
+        recargasAtivasAte[habilidade.id],
+        agoraMs,
+      ) === "ativa",
+  );
   const eraNivel = eraAtual(gatos); // 1 + Obras construídas (§4.6.9)
   const era = eraPorNivel(eraNivel);
   const podeDinastia = podeFundarNovaDinastia(gastos);
@@ -224,10 +243,10 @@ export function App() {
   const reveladorDoProximo = desbloqueados[desbloqueados.length - 1];
 
   function clicarNoPeixe() {
-    clicar();
+    const ganho = clicar();
     const id = popId.current++;
     const x = Math.round(Math.random() * 44 - 22);
-    setPops((p) => [...p, { id, value: clickPow, x }]);
+    setPops((p) => [...p, { id, value: ganho, x }]);
   }
   function removerPop(id: number) {
     setPops((p) => p.filter((x) => x.id !== id));
@@ -511,7 +530,11 @@ export function App() {
       <main className="stage">
         <section className="clickcol">
           <div className="fishwrap">
-            <button className="bigfish" onClick={clicarNoPeixe} aria-label="clicar no peixe">
+            <button
+              className={habilidadeEmBurst ? "bigfish mare-ativa" : "bigfish"}
+              onClick={clicarNoPeixe}
+              aria-label="clicar no peixe"
+            >
               <img src={fishImg} alt="" />
             </button>
             <div className="pops" aria-hidden="true">
@@ -532,6 +555,12 @@ export function App() {
               <span>peixes / segundo</span>
             </div>
             <p className="clickhint">clique <b>+{fmt(clickPow)}</b> 🐟</p>
+            {habilidadeEmBurst && (
+              <p className="mare-status" aria-live="polite">
+                {habilidadeEmBurst.emoji} {habilidadeEmBurst.nome} · clique ×
+                {habilidadeEmBurst.multiplicadorClique}
+              </p>
+            )}
             <p className="vitrine" title="Total de peixes já produzidos nesta run (estatística)">
               🐟 {fmt(lifetime)} pescados na run
             </p>
@@ -560,6 +589,29 @@ export function App() {
             const prodPredio = b.producaoPorGato * n * multProducao;
             const visiveis = Math.min(n, MAX_SHOWN);
             const art = artOf(b.id);
+            const ativa = habilidadeAtivaDoPredio(b.id);
+            const estadoAtiva = ativa
+              ? estadoDaHabilidadeAtiva(
+                  efeitosAtivosAte[ativa.id],
+                  recargasAtivasAte[ativa.id],
+                  agoraMs,
+                )
+              : null;
+            const prontoParaAtiva = ativa !== undefined && n >= 1 && estadoAtiva === "disponivel";
+            const terminoAtiva = ativa
+              ? estadoAtiva === "ativa"
+                ? efeitosAtivosAte[ativa.id]
+                : recargasAtivasAte[ativa.id]
+              : undefined;
+            const textoAtiva = !ativa
+              ? ""
+              : n < 1
+                ? "Compre 1 gato"
+                : estadoAtiva === "ativa"
+                  ? `ATIVA · ${fmtTempoRestante((terminoAtiva ?? agoraMs) - agoraMs)}`
+                  : estadoAtiva === "recarga"
+                    ? `RECARGA · ${fmtTempoRestante((terminoAtiva ?? agoraMs) - agoraMs)}`
+                    : `DISPARAR · ×${ativa.multiplicadorClique} clique`;
             const d = densidade(n);
             const stripStyle: CSSProperties = {
               ["--cat-h" as string]: `${d.alturaPx}px`,
@@ -652,6 +704,22 @@ export function App() {
                     );
                   })}
                 </div>
+
+                {ativa && (
+                  <div className="lane-active">
+                    <button
+                      className="active-skill"
+                      data-estado={estadoAtiva}
+                      disabled={!prontoParaAtiva}
+                      onClick={() => ativarHabilidadeAtiva(ativa.id)}
+                      title={`${ativa.descricao} Dura ${fmtTempoRestante(ativa.duracaoMs)}; recarga de ${fmtTempoRestante(ativa.recargaMs)}.`}
+                    >
+                      <span aria-hidden="true">{ativa.emoji}</span>
+                      <span>{ativa.nome}</span>
+                      <small>{textoAtiva}</small>
+                    </button>
+                  </div>
+                )}
 
                 <button
                   className="buy"

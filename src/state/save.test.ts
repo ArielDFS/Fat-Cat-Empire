@@ -31,6 +31,7 @@ describe("save v3 (Corte Lendária)", () => {
       gastos: 9_000,
       gatos: { caixa_papelao: 12, prefeitura_vira_lata: 1 },
       habilidades: ["caixa_papelao:m10"],
+      recargasAtivasAte: { mare_de_peixe: 123_456 },
       lendarios: { [SELO_LENDARIO_ID]: 1, barao_bigode: 3 },
       ofertaDraft: ["garra_ouro"],
       rerollsFeitos: 2,
@@ -43,6 +44,7 @@ describe("save v3 (Corte Lendária)", () => {
     expect(s.gastos).toBe(9_000);
     expect(s.coroas).toBe(3);
     expect(s.gatos.prefeitura_vira_lata).toBe(1);
+    expect(s.recargasAtivasAte).toEqual({ mare_de_peixe: 123_456 });
     expect(s.lendarios).toEqual({ [SELO_LENDARIO_ID]: 1, barao_bigode: 3 });
     expect(s.eraMaxAtingida).toBe(4);
     expect(s.dinastias).toBe(2);

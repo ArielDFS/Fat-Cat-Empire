@@ -7,17 +7,19 @@ transformam um beco num império absurdo, movidos a peixes, ronrons e ambição 
 Você compra **gatos** dentro de **prédios fixos**, o número sobe sozinho, e escolhe investir no
 eixo **passivo (idle)** ou de **clique (ativo)**.
 
-**Status:** vertical slice **v0.5** em construção. `domain/` (economia) pronta e testada; **save +
-progresso offline**, os **4 prédios com desbloqueio em cascata**, o clique e as **Habilidades
-passivas** já funcionam. As passivas vêm em **dois sabores** que competem pelos mesmos peixes
+**Status:** vertical slice **v0.7** em construção. `domain/` (economia) pronta e testada; **save +
+progresso offline**, a escada de **36 prédios com desbloqueio em cascata**, o clique e as
+**Habilidades passivas** já funcionam. As passivas vêm em **dois sabores** que competem pelos mesmos peixes
 ([ADR-0002](docs/adr/0002-passiva-de-clique.md)): **Produção** (idle) e **Clique** (ativa, invisível
 offline) — 4 arquétipos (§3.4). Arte em **dois tracks** (mundo chapado + personagens detalhados) —
 gatos, lanes, logo e HUD "claro imperial" já na tela. As **Eras do Império** (§4.5) estão prontas:
 6 graus de escala (beco → galáxia), cada um trocando o **mundo de fundo** ao cruzar, com lump de
 peixes e fanfarra. O **prestígio** (§6) já funciona: **Nova Dinastia** reseta a run em cascata,
 credita **Coroas** e concede o **Selo Imperial** (produção global ×1,5 permanente) na estreia, com
-tela de confirmação obrigatória. Falta o eixo *clicker* completar — as **Habilidades ativas** de
-burst (§3.5) — além do **Festival da Sardinha** e das **conquistas** (§8 no roteiro).
+tela de confirmação obrigatória. O primeiro burst do eixo *clicker* já está no jogo: **Maré de
+Peixe**, hospedada na Barraca, dá clique ×5 por 15 s e recarrega em 90 s; a cadência acima de 8
+cliques/s sofre retorno decrescente e saturante. Restam o **Festival da Sardinha**, as **conquistas** e o
+playtest de balanceamento ativa versus idle (§8 no roteiro).
 
 > Cortados em grelha (não são pendências): o **estágio visual do prédio por marco** e os **3 estágios
 > do Beco** — a progressão visível é a troca de mundo por Era + o enxame enchendo a lane.

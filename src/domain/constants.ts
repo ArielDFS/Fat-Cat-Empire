@@ -15,6 +15,12 @@ export const COST_GROWTH = 1.15;
 /** Peixes por clique = produção/segundo × isto (com piso de 1). */
 export const CLICK_FACTOR = 0.01;
 
+/** Cliques por segundo que ainda recebem o valor integral — ritmo humano confortável. */
+export const CLICK_CADENCE_FULL_CLICKS = 8;
+
+/** A cada clique acima do ritmo confortável, o valor relativo cai este fator (curva saturante). */
+export const CLICK_CADENCE_EXCESS_FACTOR = 0.8;
+
 /** Fração da produção normal creditada enquanto ausente. */
 export const OFFLINE_RATE = 0.5;
 

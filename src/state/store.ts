@@ -10,6 +10,7 @@ import { BUILDINGS } from "../data/buildings";
 import type { Building } from "../data/buildings";
 import { abilityPorId, abilitiesDoPredio, poolDe } from "../data/abilities";
 import type { PassiveAbility, EfeitoPassiva } from "../data/abilities";
+import { HABILIDADES_ATIVAS, habilidadeAtivaPorId } from "../data/activeAbilities";
 import { custoDeVariosGatos } from "../domain/cost";
 import {
   habilidadeDesbloqueada,
@@ -18,7 +19,8 @@ import {
   bonusColheita,
 } from "../domain/abilities";
 import type { EfeitoProducao, EfeitoClique } from "../domain/abilities";
-import { peixesPorClique } from "../domain/click";
+import { fatorDaCadenciaClique, peixesPorClique, proximaCadenciaClique } from "../domain/click";
+import { estadoDaHabilidadeAtiva, multiplicadorCliqueAtivo } from "../domain/activeAbilities";
 import { producaoPorSegundo } from "../domain/production";
 import type { PredioProdutor } from "../domain/production";
 import { calcularGanhoOffline } from "../domain/offline";
@@ -66,6 +68,17 @@ function normalizarHabilidades(salvas: readonly string[]): string[] {
     if (abilityPorId(id) && !vistas.has(id)) {
       vistas.add(id);
       out.push(id);
+    }
+  }
+  return out;
+}
+
+/** Descarta recargas desconhecidas ou inválidas de saves; a janela ativa nunca é restaurada offline. */
+function normalizarRecargasAtivas(salvas: Record<string, number> | undefined): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [id, terminoMs] of Object.entries(salvas ?? {})) {
+    if (habilidadeAtivaPorId(id) && typeof terminoMs === "number" && Number.isFinite(terminoMs) && terminoMs > 0) {
+      out[id] = terminoMs;
     }
   }
   return out;
@@ -127,6 +140,22 @@ function multProducaoDoPredio(
 /** Efeitos de clique de TODAS as passivas compradas (o clique é global, ADR-0002). */
 function efeitosCliqueGlobais(habilidades: readonly string[]): EfeitoClique[] {
   return efeitosComprados(habilidades).filter((e): e is EfeitoClique => poolDe(e) === "clique");
+}
+
+/** Produto dos bursts ativos; sem janela em curso, cada Habilidade contribui ×1. */
+function multiplicadorDasHabilidadesAtivas(
+  efeitosAtivosAte: Record<string, number>,
+  agoraMs: number,
+): number {
+  let mult = 1;
+  for (const habilidade of HABILIDADES_ATIVAS) {
+    mult *= multiplicadorCliqueAtivo(
+      habilidade.multiplicadorClique,
+      efeitosAtivosAte[habilidade.id],
+      agoraMs,
+    );
+  }
+  return mult;
 }
 
 // --- Ponte da Corte Lendária (data + estado → domain) ---
@@ -193,6 +222,16 @@ export interface GameState {
   gatos: Record<string, number>;
   /** Ids das Habilidades passivas já compradas na run (§3.4). Reseta na Nova Dinastia. */
   habilidades: string[];
+  /** Fim da janela de burst por Habilidade ativa. É efêmero: nunca volta após ficar offline. */
+  efeitosAtivosAte: Record<string, number>;
+  /** Fim da recarga por Habilidade ativa. Persiste para recarregar sem exploração por reload. */
+  recargasAtivasAte: Record<string, number>;
+  /** Relógio de apresentação das janelas; o loop o atualiza sem conduzir economia. */
+  agoraMs: number;
+  /** Nível do balde de cadência; efêmero, usado só para retorno decrescente (§3.5). */
+  cadenciaClique: number;
+  /** Instante do último clique; com a cadência forma um balde vazante contínuo. */
+  ultimoCliqueMs: number | null;
   /** Gatos Lendários recrutados → nível (§4.6.7, ADR-0004). Permanente. O Selo Imperial é o #0. */
   lendarios: Record<string, number>;
   /** Oferta atual do draft (ids sorteados do pool). Persiste pra não sumir ao recarregar. */
@@ -224,7 +263,9 @@ export interface GameState {
   /** Sobe o nível de um Lendário recrutado, gastando Coroas (§4.6.7). */
   subirNivelLendario: (id: string) => void;
   /** Um clique manual no peixe grande. */
-  clicar: () => void;
+  clicar: (agoraMs?: number) => number;
+  /** Dispara uma Habilidade ativa disponível no Prédio anfitrião. */
+  ativarHabilidadeAtiva: (id: string, agoraMs?: number) => void;
   /** Funda a Nova Dinastia (§6): credita coroas, concede o Selo (Lendário #0) na estreia, reseta a run. */
   novaDinastia: () => void;
   /** Avança a produção passiva por `dtSegundos` de tempo real. */
@@ -246,6 +287,11 @@ export const useGame = create<GameState>((set, get) => ({
   gastos: 0,
   gatos: gatosZerados(),
   habilidades: [],
+  efeitosAtivosAte: {},
+  recargasAtivasAte: {},
+  agoraMs: Date.now(),
+  cadenciaClique: 0,
+  ultimoCliqueMs: null,
   lendarios: {},
   ofertaDraft: [],
   rerollsFeitos: 0,
@@ -342,10 +388,35 @@ export const useGame = create<GameState>((set, get) => ({
     set({ coroas: s.coroas - custo, lendarios: { ...s.lendarios, [id]: nivel + 1 } });
   },
 
-  clicar: () => {
+  clicar: (agoraMs = Date.now()) => {
     const s = get();
-    const ganho = poderDeClique(s);
-    set(creditarGanho(s, ganho));
+    const msDesdeUltimoClique = s.ultimoCliqueMs === null ? 0 : agoraMs - s.ultimoCliqueMs;
+    const cadenciaClique = proximaCadenciaClique(s.cadenciaClique, msDesdeUltimoClique);
+    const ganho = poderDeClique({ ...s, agoraMs }) * fatorDaCadenciaClique(cadenciaClique);
+    set({ ...creditarGanho(s, ganho), agoraMs, cadenciaClique, ultimoCliqueMs: agoraMs });
+    return ganho;
+  },
+
+  ativarHabilidadeAtiva: (id, agoraMs = Date.now()) => {
+    const s = get();
+    const habilidade = habilidadeAtivaPorId(id);
+    if (!habilidade) return;
+    if ((s.gatos[habilidade.buildingId] ?? 0) < 1) return; // o anfitrião precisa existir na run
+    if (
+      estadoDaHabilidadeAtiva(
+        s.efeitosAtivosAte[id],
+        s.recargasAtivasAte[id],
+        agoraMs,
+      ) !== "disponivel"
+    ) {
+      return;
+    }
+
+    set({
+      efeitosAtivosAte: { ...s.efeitosAtivosAte, [id]: agoraMs + habilidade.duracaoMs },
+      recargasAtivasAte: { ...s.recargasAtivasAte, [id]: agoraMs + habilidade.recargaMs },
+      agoraMs,
+    });
   },
 
   novaDinastia: () => {
@@ -366,6 +437,10 @@ export const useGame = create<GameState>((set, get) => ({
       gastos: 0,
       gatos: gatosZerados(),
       habilidades: [],
+      efeitosAtivosAte: {},
+      recargasAtivasAte: {},
+      cadenciaClique: 0,
+      ultimoCliqueMs: null,
       coroas: s.coroas + coroasGanhas,
       lendarios,
       dinastias: s.dinastias + 1,
@@ -382,9 +457,13 @@ export const useGame = create<GameState>((set, get) => ({
   tick: (dtSegundos) => {
     if (dtSegundos <= 0) return;
     const s = get();
+    const agoraMs = Date.now();
     const ganho = prodPorSegundo(s) * dtSegundos;
-    if (ganho <= 0) return;
-    set(creditarGanho(s, ganho));
+    if (ganho <= 0) {
+      set({ agoraMs });
+      return;
+    }
+    set({ ...creditarGanho(s, ganho), agoraMs });
   },
 
   hidratar: () => {
@@ -409,6 +488,7 @@ export const useGame = create<GameState>((set, get) => ({
       gastos: save.gastos,
       gatos: normalizarGatos(save.gatos),
       habilidades: normalizarHabilidades(save.habilidades),
+      recargasAtivasAte: normalizarRecargasAtivas(save.recargasAtivasAte),
       // Os Lendários entram no `base` porque o offline usa `prodPorSegundo(base)`, que aplica o
       // multiplicador de produção da Corte (o Selo #0 rende ausente, como qualquer produção).
       lendarios,
@@ -425,6 +505,10 @@ export const useGame = create<GameState>((set, get) => ({
     // peixes+lifetime (vitrine), não gastos.
     set({
       ...base,
+      efeitosAtivosAte: {}, // Habilidades de clique são presença: uma janela não sobrevive ao offline.
+      agoraMs: Date.now(),
+      cadenciaClique: 0,
+      ultimoCliqueMs: null,
       peixes: base.peixes + ganhoFinal.peixes,
       lifetime: base.lifetime + ganhoFinal.peixes,
       eraMaxAtingida,
@@ -449,6 +533,7 @@ export const useGame = create<GameState>((set, get) => ({
       gastos: s.gastos,
       gatos: s.gatos,
       habilidades: s.habilidades,
+      recargasAtivasAte: s.recargasAtivasAte,
       lendarios: s.lendarios,
       ofertaDraft: s.ofertaDraft,
       rerollsFeitos: s.rerollsFeitos,
@@ -489,6 +574,7 @@ export function eraAtual(gatos: Record<string, number>): number {
 }
 
 type EstadoProducao = Pick<GameState, "gatos" | "habilidades" | "lendarios">;
+type EstadoClique = EstadoProducao & Pick<GameState, "efeitosAtivosAte" | "agoraMs">;
 
 export function prodPorSegundo(s: EstadoProducao): number {
   // ADR-0004: o multiplicador global de produção vem dos Lendários (que já incluem o Selo #0).
@@ -496,10 +582,15 @@ export function prodPorSegundo(s: EstadoProducao): number {
   return producaoPorSegundo(produtores(s.gatos, s.habilidades), mult);
 }
 
-export function poderDeClique(s: EstadoProducao): number {
+export function poderDeClique(s: EstadoClique): number {
   const clique = efeitosCliqueGlobais(s.habilidades);
   const lendClique = multsDaCorte(s.lendarios).clique; // Lendários de clique multiplicam por fora
-  return peixesPorClique(prodPorSegundo(s), multiplicadorClique(clique) * lendClique, bonusColheita(clique));
+  const ativas = multiplicadorDasHabilidadesAtivas(s.efeitosAtivosAte, s.agoraMs);
+  return peixesPorClique(
+    prodPorSegundo(s),
+    multiplicadorClique(clique) * lendClique * ativas,
+    bonusColheita(clique),
+  );
 }
 
 /** Custo de comprar gatos já com a redução dos Lendários de custo (`custoReducao`) aplicada. */

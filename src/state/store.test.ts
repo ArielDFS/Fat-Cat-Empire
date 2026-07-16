@@ -6,6 +6,8 @@ import { SELO_LENDARIO_ID } from "../data/legendaries";
 import { LUMP_SEGUNDOS, LUMP_PISO } from "../data/eras";
 import { lumpDaEra } from "../domain/era";
 import { PRESTIGE_DIVISOR } from "../domain/constants";
+import { MARE_DE_PEIXE } from "../data/activeAbilities";
+import { gravarSave } from "./save";
 
 const CLIQUE10 = abilityPorId("caixa_papelao:m10")!; // C1 clique ×1,5, marco 10
 const PROD25 = abilityPorId("caixa_papelao:m25")!; //   P1 produção ×2, marco 25
@@ -19,6 +21,11 @@ function seed(patch: Partial<ReturnType<typeof useGame.getState>>) {
     coroas: 0,
     gatos: {},
     habilidades: [],
+    efeitosAtivosAte: {},
+    recargasAtivasAte: {},
+    agoraMs: 0,
+    cadenciaClique: 0,
+    ultimoCliqueMs: null,
     lendarios: {},
     ofertaDraft: [],
     rerollsFeitos: 0,
@@ -31,7 +38,19 @@ function seed(patch: Partial<ReturnType<typeof useGame.getState>>) {
   });
 }
 
-beforeEach(() => seed({}));
+function instalarLocalStorageStub() {
+  const mapa = new Map<string, string>();
+  (globalThis as { localStorage?: unknown }).localStorage = {
+    getItem: (chave: string) => mapa.get(chave) ?? null,
+    setItem: (chave: string, valor: string) => void mapa.set(chave, valor),
+    removeItem: (chave: string) => void mapa.delete(chave),
+  };
+}
+
+beforeEach(() => {
+  instalarLocalStorageStub();
+  seed({});
+});
 
 describe("comprarHabilidade (§3.4)", () => {
   it("compra uma passiva aberta: debita peixes e a registra", () => {
@@ -86,6 +105,80 @@ describe("efeito das passivas na economia (ADR-0002)", () => {
     useGame.getState().comprarHabilidade(CLIQUE10.id);
     expect(prodPorSegundo(useGame.getState())).toBeCloseTo(prodAntes); // produção intacta
     expect(poderDeClique(useGame.getState())).toBeCloseTo(clickAntes * 1.5); // clique ×1,5
+  });
+});
+
+describe("Maré de Peixe (Habilidade ativa, §3.5)", () => {
+  it("só dispara quando a Barraca tem gato e multiplica o clique durante a janela", () => {
+    // Produção suficiente para o piso de 1 peixe/clique não esconder o multiplicador.
+    seed({ gatos: { caixa_papelao: 1, barraca_peixe: 100 }, agoraMs: 1_000 });
+    const cliqueBase = poderDeClique(useGame.getState());
+
+    useGame.getState().ativarHabilidadeAtiva(MARE_DE_PEIXE.id, 1_000);
+
+    const ativa = useGame.getState();
+    expect(ativa.efeitosAtivosAte[MARE_DE_PEIXE.id]).toBe(16_000);
+    expect(ativa.recargasAtivasAte[MARE_DE_PEIXE.id]).toBe(91_000);
+    expect(poderDeClique(ativa)).toBeCloseTo(cliqueBase * 5);
+
+    useGame.setState({ agoraMs: 16_000 });
+    expect(poderDeClique(useGame.getState())).toBeCloseTo(cliqueBase);
+  });
+
+  it("não dispara sem gato no prédio anfitrião nem durante a recarga", () => {
+    seed({ gatos: { caixa_papelao: 1 }, agoraMs: 1_000 });
+    useGame.getState().ativarHabilidadeAtiva(MARE_DE_PEIXE.id, 1_000);
+    expect(useGame.getState().recargasAtivasAte).toEqual({});
+
+    seed({ gatos: { caixa_papelao: 1, barraca_peixe: 1 }, agoraMs: 1_000 });
+    useGame.getState().ativarHabilidadeAtiva(MARE_DE_PEIXE.id, 1_000);
+    useGame.getState().ativarHabilidadeAtiva(MARE_DE_PEIXE.id, 2_000);
+    expect(useGame.getState().recargasAtivasAte[MARE_DE_PEIXE.id]).toBe(91_000);
+  });
+});
+
+describe("cadência de clique (§3.5)", () => {
+  it("reduz suavemente o nono clique da mesma janela, inclusive durante o burst", () => {
+    seed({ gatos: { caixa_papelao: 1, barraca_peixe: 100 }, agoraMs: 1_000 });
+    useGame.getState().ativarHabilidadeAtiva(MARE_DE_PEIXE.id, 1_000);
+    const cliqueEmBurst = poderDeClique(useGame.getState());
+
+    const ganhos = Array.from({ length: 9 }, () => useGame.getState().clicar(1_000));
+
+    expect(ganhos[0]).toBeCloseTo(cliqueEmBurst);
+    expect(ganhos[8]).toBeCloseTo(cliqueEmBurst * 0.8);
+  });
+
+  it("restaura o valor integral quando a janela móvel expira", () => {
+    seed({ gatos: { caixa_papelao: 1, barraca_peixe: 100 }, agoraMs: 1_000 });
+    const cliqueBase = poderDeClique(useGame.getState());
+    Array.from({ length: 9 }, () => useGame.getState().clicar(1_000));
+
+    expect(useGame.getState().clicar(2_000)).toBeCloseTo(cliqueBase);
+  });
+});
+
+describe("hidratação da Habilidade ativa", () => {
+  it("descarta o burst offline e mantém a recarga salva", () => {
+    const recargaAte = Date.now() + MARE_DE_PEIXE.recargaMs;
+    gravarSave({
+      peixes: 0,
+      lifetime: 0,
+      coroas: 0,
+      gastos: 0,
+      gatos: { caixa_papelao: 1, barraca_peixe: 1 },
+      habilidades: [],
+      recargasAtivasAte: { [MARE_DE_PEIXE.id]: recargaAte },
+    });
+    seed({
+      efeitosAtivosAte: { [MARE_DE_PEIXE.id]: Date.now() + MARE_DE_PEIXE.duracaoMs },
+    });
+
+    useGame.getState().hidratar();
+
+    const estado = useGame.getState();
+    expect(estado.efeitosAtivosAte).toEqual({});
+    expect(estado.recargasAtivasAte).toEqual({ [MARE_DE_PEIXE.id]: recargaAte });
   });
 });
 

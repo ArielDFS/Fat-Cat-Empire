@@ -37,6 +37,8 @@ export interface SaveData {
   gatos: Record<string, number>;
   /** Ids das Habilidades passivas compradas na run (§3.4). Ausente em saves antigos → []. */
   habilidades: string[];
+  /** Fim da recarga por Habilidade ativa. A janela de burst não persiste: clique não rende offline. */
+  recargasAtivasAte?: Record<string, number>;
   /** Gatos Lendários recrutados → nível (§4.6.7). Permanente. O Selo Imperial é o #0. */
   lendarios?: Record<string, number>;
   /** Oferta atual do draft (ids). Ausente/vazio → a store sorteia uma nova. */
@@ -111,6 +113,11 @@ export function carregarSave(): SaveData | null {
       ? data.habilidades.filter((x): x is string => typeof x === "string")
       : [];
 
+    const recargasAtivasAte =
+      typeof data.recargasAtivasAte === "object" && data.recargasAtivasAte !== null
+        ? (data.recargasAtivasAte as Record<string, number>)
+        : undefined;
+
     // `gastos` (§6, v0.6): base do prestígio. Ausente/inválido → 0 (defensivo).
     const gastos =
       typeof data.gastos === "number" && Number.isFinite(data.gastos) && data.gastos >= 0
@@ -153,6 +160,7 @@ export function carregarSave(): SaveData | null {
     return {
       ...(data as SaveData),
       habilidades,
+      recargasAtivasAte,
       gastos,
       lendarios,
       ofertaDraft,
