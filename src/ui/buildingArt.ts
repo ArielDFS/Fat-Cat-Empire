@@ -18,6 +18,9 @@ import catFeirante from "../assets/cat_feirante.png";
 import pier from "../assets/pier.png";
 import laneFishingPier from "../assets/lane_fishing_pier.png";
 import catFisher from "../assets/cat_fisher.png";
+import lataoGourmet from "../assets/latao_gourmet.png";
+import laneLataoGourmet from "../assets/lane_latao_gourmet.png";
+import catCatador from "../assets/cat_catador.png";
 
 export interface BuildingArt {
   /** Ícone do prédio (lado esquerdo da lane). */
@@ -33,6 +36,7 @@ const ART: Record<string, BuildingArt> = {
   barraca_peixe: { icone: fishingBarrack, lane: laneFishingBarrack, gato: catFishSeller },
   miaurcado: { icone: market, lane: laneMarket, gato: catFeirante },
   pier_pesca: { icone: pier, lane: laneFishingPier, gato: catFisher },
+  latao_gourmet: { icone: lataoGourmet, lane: laneLataoGourmet, gato: catCatador },
 };
 
 /** Prédios sem arte própria reusam a Caixa até termos os PNGs. */

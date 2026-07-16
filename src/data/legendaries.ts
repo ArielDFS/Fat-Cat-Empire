@@ -118,6 +118,14 @@ export const LEGENDARIES: readonly LendarioDef[] = [
     efeito: { tipo: "producaoMult", porNivel: 1.25 },
   },
   {
+    id: "princesa_helena",
+    nome: "Princesa Helena",
+    descricao: "A pequena herdeira da lua — seu aceno faz cada virada de Era brilhar ainda mais.",
+    emoji: "🌙",
+    tier: 5,
+    efeito: { tipo: "lumpMult", porNivel: 1.75 },
+  },
+  {
     id: "punho_cometa",
     nome: "Punho Cometa",
     descricao: "Soco à velocidade da luz — clique devastador.",

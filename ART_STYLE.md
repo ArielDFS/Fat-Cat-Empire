@@ -109,6 +109,7 @@ livres, mas mantenha as **pelagens bem distintas**:
 | **peixeiro** | Barraca de Peixe | tuxedo branco-e-preto | avental teal-e-branco listrado + chapéu de papel + peixe embrulhado | turquesa |
 | **feirante** | Miaurcado | tigrado caramelo/castanho malhado | avental verde + camisa listrada + caixote de peixe e legumes + bolsa de moedas | verde |
 | **pescador** | Píer de Pesca | cinza-azulado tigrado | chapéu de chuva turquesa + capa de chuva amarela + vara | turquesa/amarelo |
+| **catador** | Latão Gourmet | tigrado cinza-carvão + focinho/patas creme | dólmã vinho + avental remendado + tampa-bandeja e cloche | vinho/latão envelhecido |
 
 O contorno escuro (`#241C2E`) é o **único elo forçado** entre os tracks — mantenha-o nos gatos
 (e nos prédios, §2C) pra tudo pertencer ao mesmo mundo.
@@ -125,6 +126,7 @@ diferenciam (§1A + isto): um prédio deve ser reconhecível pela forma *e* pela
 | Barraca de Peixe | turquesa + madeira clara | barraca de doca marítima |
 | **Miaurcado** | **verde + branco** (supermercado) | loja moderna de fachada de vidro — **não** vendinha |
 | Píer de Pesca | azul-marinho/índigo + madeira escura + âmbar de lampião | píer de doca ao entardecer |
+| **Latão Gourmet** | **cinza-carvão + vinho + latão envelhecido** | grande latão de lixo convertido em bistrô pretensioso |
 
 > **Nota (2026-07-15):** os 4 prédios acima são os **pilotos**. O jogo cresce acrescentando **muitos
 > mais prédios em ordem de custo crescente** — cada um ganha sua própria identidade de cor por esta
@@ -288,7 +290,7 @@ flat vector, minimalist, plain, low detail, dull or washed-out colors, photoreal
 deformed, extra limbs, blurry, text, watermark, signature, multiple characters, cropped, busy background
 ```
 
-### `[SUBJECT]` dos 4 gatos-tipo
+### `[SUBJECT]` dos 5 gatos-tipo
 
 | Tipo | SUBJECT |
 |---|---|
@@ -296,6 +298,7 @@ deformed, extra limbs, blurry, text, watermark, signature, multiple characters, 
 | **peixeiro** ✅ | `a plump tuxedo cat fishmonger with a crisp white chest, muzzle and paws and a glossy black back and head, wearing a teal-and-white striped waterproof fishmonger's apron and a little white paper hat, sleeves rolled up, proudly holding out a big fresh fish wrapped in paper as if making a sale, warm friendly salesman grin, a small price tag tucked in the apron pocket` |
 | **feirante** ✅ | `a plump caramel-and-brown spotted tabby market-vendor cat wearing a green grocer's apron over a rolled-up striped shirt, a pencil tucked behind one ear and a coin pouch on the belt, holding a small wooden crate of fish and produce, warm cheerful salesman grin` |
 | **pescador** ✅ | `a fluffy blue-gray tabby fisherman cat wearing a teal rain hat and a rolled-up yellow raincoat, holding a small fishing rod with a fish on the line, cheerful confident expression, a tiny anchor pin on the coat` |
+| **catador** ✅ | `a plump smoky charcoal-gray tabby scavenger-chef cat with a warm cream muzzle, chest and paws, wearing a deep-wine burgundy chef jacket, patched cream apron and bottle-cap utility belt, proudly using a clean round trash-can lid as a serving tray for an absurdly elegant fishbone canapé while lifting a small brass cloche, clever warm grin` |
 
 > **Regra de referência (§6B):** o pescador aprovado é a **âncora de estilo**. Gere os outros 3
 > *com ele como referência de estilo/traço* — muda a pelagem e o traje, mantém a família.
@@ -352,6 +355,7 @@ o **material e a coisa** de cada lane. Cor sempre como **tom**, nunca como luz r
 | `bg_lane_barraca` ✅ | `a wet cobblestone harbor dock at night, weathered stone quay wall, scattered fish scales, a coil of rope and a wooden crate to one side, faint shallow puddles with a subtle teal tint` |
 | `bg_lane_miaurcado` ✅ | `a cobblestone neighborhood street-market floor, a low market stall counter wall behind with a folded striped awning valance, a couple of stacked wooden crates and a few dropped fruits and fish scales to one side, warm earthy market tones with a soft orange tint` |
 | `lane_fishing_pier` ✅ | `a weathered wooden pier walkway at night, dark timber plank floor, a low wooden pier railing behind it, a coil of rope and a folded fishing net to one side, a couple of wooden barrels, calm deep harbor water hinted beyond the railing, deep indigo-and-navy tones with a subtle warm amber tint` |
+| `lane_latao_gourmet` ✅ | `a back-alley bistro service corridor, worn charcoal cobblestone floor, low dark brick-and-aged-metal wall, sparse dented food tins and a low wooden crate, subtle brass pipework and a burgundy awning edge, refined-but-recycled atmosphere in wine, charcoal and aged-brass tones` |
 
 Pipeline (v0.5): recorta/redimensiona **à mão** e salva a tira em `src/assets/`. No jogo a lane repete
 no eixo X (`background-repeat: repeat-x`), então a emenda invisível é obrigatória.
@@ -401,6 +405,7 @@ Cor sempre puxando a **identidade do §2C**, para os prédios não convergirem.
 | Barraca de Peixe | `a wooden harbor fish stall with a teal-and-white striped canopy, hanging fish and a crate of ice, weathered wood and turquoise tones` |
 | **Miaurcado** ✅ | `a chunky cartoon neighborhood SUPERMARKET building, a flat modern storefront with big glass windows and automatic double glass doors, a wide blank sign board across the top with a little fish-and-leaf emblem (no lettering), a green-and-white color scheme with warm wood accents, a row of shopping carts out front, crates of fresh fish and produce visible through the windows, a small green entrance awning, clearly a proper store and NOT a market stall` |
 | Píer de Pesca | `a charming wooden fishing pier — a raised jetty of weathered dark-timber planks on stout pilings with a cozy little shingled hut at the end, hanging fishing nets, glowing amber lanterns, coiled rope, wooden barrels and a couple of fishing rods leaning on the rail, buckets of fresh fish; a small patch of stylized deep-blue water lapping around the pilings forms the flat base; deep indigo-and-navy water with weathered brown wood and warm amber lantern glow, dusk mood, clearly distinct from the bright teal fish stall` |
+| **Latão Gourmet** ✅ | `a humorous upscale bistro built from one huge battered cylindrical urban trash can, its tilted lid becoming a burgundy awning over a tiny service window, charcoal-gray metal with aged-brass trim and copper rivets, a blank oval plaque carrying only a fishbone-and-fork emblem, tiny velvet rope, stacked dented food tins and one wooden crate, sophisticated and ridiculous, visibly recycled but lovingly polished` |
 
 ---
 
@@ -502,13 +507,13 @@ do style block e do contorno `#241C2E`.
 
 ---
 
-## 7. Lista de assets do slice (~23)
+## 7. Lista de assets do slice (~30)
 
 | Grupo | Itens | Track | Qtd |
 |---|---|---|---|
-| **Gatos-tipo (detalhados)** | rua, peixeiro, feirante, pescador | Detailed (§5.2) | 4 |
-| Prédios (ícone de lane) | 4 prédios × **1 ícone** | **Detailed (§5.4)** | 4 |
-| Fundos de lane | 1 tira por prédio × 4 | Detailed (§5.3) | 4 |
+| **Gatos-tipo (detalhados)** | rua, peixeiro, feirante, pescador, catador | Detailed (§5.2) | 5 |
+| Prédios (ícone de lane) | 5 prédios × **1 ícone** | **Detailed (§5.4)** | 5 |
+| Fundos de lane | 1 tira por prédio × 5 | Detailed (§5.3) | 5 |
 | Fundo de mundo (Era) | 1 cena detalhada por Era × 6 Eras, backdrop fixo da viewport | Detailed | 6 |
 | Ícones | peixe, coroa, compra, habilidade, evento | World/UI | 5 |
 | VFX | peixe, moeda, confete, estrela | World/UI | 4 |
@@ -539,7 +544,7 @@ cat_metropole.png (4)  cat_empire.png (5)    cat_galaxy_empire.png (6)
 ```
 
 Só o **contorno `#241C2E`** e os style blocks (§5.x) são travados. Minúsculas, `snake_case`, sem
-acento, sem espaço. Os 4 prédios-piloto e os 6 céus já têm arte; o mapeamento vive em
+acento, sem espaço. Os 4 prédios-piloto, o Latão Gourmet e os 6 céus já têm arte; o mapeamento vive em
 `ui/buildingArt.ts` (prédios) e `ui/eraArt.ts` (céus).
 
 ---
@@ -598,3 +603,4 @@ Nomes de arquivo são livres; o mapeamento `Building.id → {icone, lane, gato}`
 | 2026-07-15 | **Níveis de prédio (n1/n2/n3) cortados — documentando decisão de grelha.** Os marcos não mudam mais o sprite do prédio (GAME_DESIGN §3.4); cada prédio tem **1 ícone só**. §7 volta de "4×2=8" pra 4; a linha de mundo de Era vira 6. A progressão visível fica na troca de mundo por Era (§5.5) + o enxame na lane |
 | 2026-07-15 | **Céus de Era variam a hora do dia (opção 2).** Antes forçados a "noite escura" pra a UI ler por cima — deixava as 6 Eras parecidas. Agora sobem noite → amanhecer → dia → entardecer → crepúsculo → cósmico (vende a subida de escala). A legibilidade passa a vir de um **scrim** (degradê escuro sutil no topo/base do `.skybg`, `styles.css`), não do céu escuro. Prompts dos 5 céus refeitos no §5.5 |
 | 2026-07-15 | **Prédio 4: Banco do Atum → Píer de Pesca.** O pescador guardado vira o gato do Píer; lane `lane_fishing_pier.png` já existe; ícone pendente. Identidade de cor: índigo/azul-marinho + madeira escura + âmbar (§2C). Os 4 prédios são **pilotos** — virão muitos mais em ordem crescente. Atualiza §2B, §2C, §5.2, §5.3, §5.4, §7; código em `buildings.ts`/`abilities.ts`/`buildingArt.ts` |
+| 2026-07-16 | **Latão Gourmet — primeiro conjunto pós-pilotos.** Prédio, gato catador-chef e lane próprios substituem o fallback da Caixa. Identidade carvão + vinho + latão envelhecido; prédio = latão de lixo convertido em bistrô, trabalhador usa tampa como bandeja, lane = corredor de serviço reciclado. Assets ligados em `ui/buildingArt.ts`. |

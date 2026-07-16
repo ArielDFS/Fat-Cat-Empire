@@ -7,9 +7,17 @@
  */
 
 import empressJady from "../assets/legend_empress_jady.png";
+import princessHelena from "../assets/legend_princess_helena.png";
+import schrodingerCat from "../assets/legend_schrodinger_cat.png";
+import vortexGuardian from "../assets/legend_vortex_guardian.png";
+import baronBigode from "../assets/legend_baron_bigode.png";
 
 const ART: Record<string, string> = {
   imperatriz_jady: empressJady,
+  princesa_helena: princessHelena,
+  gato_schrodinger: schrodingerCat,
+  guardiao_vortex: vortexGuardian,
+  barao_bigode: baronBigode,
 };
 
 /** PNG do Lendário, ou `undefined` se ele ainda não tem arte (a UI usa o emoji como fallback). */
